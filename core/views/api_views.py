@@ -26,13 +26,10 @@ logger = logging.getLogger(__name__)
 def enroll_view(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     Enrollment.objects.get_or_create(user=request.user, course=course)
-    # Redirecting to dashboard might be better handled on the frontend
-    # but we'll keep it as is for now.
     return redirect('dashboard')
 
 @login_required
 def roadmap_view(request, course_id):
-    # This is also an API-like view, so it fits here.
     course = get_object_or_404(Course, id=course_id)
     if not Enrollment.objects.filter(user=request.user, course=course).exists():
         return JsonResponse({'error': 'You are not enrolled in this course.'}, status=403)
@@ -77,9 +74,8 @@ def edit_note_view(request, note_id):
         note.title = new_title
         note.content = new_content
         note.save()
-        # --- FIXED: Return the updated note object in the response ---
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': 'Note updated successfully.',
             'note': {
                 'id': note.id,
@@ -98,41 +94,6 @@ def delete_note_view(request, note_id):
     note.delete()
     return JsonResponse({'status': 'success', 'message': 'Note deleted successfully.'})
 
-# ... (AssistantAPIView remains the same) ...
-class AssistantAPIView(APIView):
-    """
-    API View to handle queries to the AI assistant.
-    Passes all context to the query_router.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        query = request.data.get('query')
-        video_id = request.data.get('video_id')
-        video_title = request.data.get('video_title')
-        timestamp = request.data.get('timestamp', 0)
-
-        logger.info(f"API Request: query='{query}', video_id='{video_id}', timestamp='{timestamp}'")
-
-        if not query:
-            return Response(
-                {'error': 'Query not provided.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            answer = query_router(
-                query=query,
-                video_id=video_id,
-                video_title=video_title,
-                timestamp=timestamp
-            )
-            return Response({'answer': answer}, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"An error occurred in AssistantAPIView: {e}", exc_info=True)
-            return Response(
-                {'error': 'An error occurred while processing your request.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
 # --- AI Assistant API View ---
 
 class AssistantAPIView(APIView):
@@ -146,7 +107,8 @@ class AssistantAPIView(APIView):
         query = request.data.get('query')
         video_id = request.data.get('video_id')
         video_title = request.data.get('video_title')
-        timestamp = request.data.get('timestamp', 0)
+        # --- UPDATED: Ensure timestamp is a float ---
+        timestamp = float(request.data.get('timestamp', 0))
 
         logger.info(f"API Request: query='{query}', video_id='{video_id}', timestamp='{timestamp}'")
 
