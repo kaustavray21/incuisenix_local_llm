@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
             self.stdout.write(f'Populating transcripts for "{video.title}"...')
             file_path = os.path.join(settings.MEDIA_ROOT, 'transcripts', video.course.title, f'{video.youtube_id}.csv')
-            
+
             if not os.path.exists(file_path):
                 self.stdout.write(self.style.WARNING(f'  -> CSV file not found. Skipping.'))
                 continue
@@ -53,7 +53,8 @@ class Command(BaseCommand):
                                     video=video,
                                     course=video.course,
                                     start=start_time,
-                                    content=content.strip()
+                                    content=content.strip(),
+                                    youtube_id=video.youtube_id
                                 )
                             )
                         except (ValueError, TypeError):
@@ -67,4 +68,3 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f'  -> Failed to process transcript: {e}'))
 
         self.stdout.write(self.style.SUCCESS('Finished transcript population check.'))
-

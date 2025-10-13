@@ -86,6 +86,8 @@ def create_or_update_vector_store():
     # Save the new, correct FAISS index to disk
     vector_store.save_local(FAISS_INDEX_PATH)
     print(f"Successfully saved FAISS index to {FAISS_INDEX_PATH}")
+
+
 def parse_timestamp_from_query(query):
     """Finds a timestamp in formats like HH:MM:SS or MM:SS and converts it to seconds."""
     match = re.search(r'(\d{1,2}):(\d{1,2}):(\d{1,2})|(\d{1,2}):(\d{1,2})', query)
