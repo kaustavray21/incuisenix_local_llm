@@ -3,5 +3,5 @@ env/
 __pycache__/
 *.pyc
 downloads
-faiss_index
+faiss_indexes
 
