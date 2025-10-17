@@ -47,6 +47,7 @@ class Enrollment(models.Model):
 class Note(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     video = models.ForeignKey(Video, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
     title = models.CharField(max_length=200)
     content = models.TextField()
     video_timestamp = models.PositiveIntegerField(help_text="Timestamp in seconds")

@@ -40,7 +40,6 @@ def roadmap_view(request, course_id):
     return JsonResponse(course_data)
 
 # --- Note API Views ---
-
 @login_required
 @require_POST
 def add_note_view(request, video_id):
@@ -50,6 +49,7 @@ def add_note_view(request, video_id):
         note = form.save(commit=False)
         note.user = request.user
         note.video = video
+        note.course = video.course
         note.save()
         note_card_html = render_to_string(
             'core/components/video_player/_note_card.html',
@@ -60,7 +60,6 @@ def add_note_view(request, video_id):
             'note_card_html': note_card_html,
         })
     return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-
 
 @login_required
 @require_POST
