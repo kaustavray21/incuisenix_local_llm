@@ -1,0 +1,166 @@
+/* static/css/responsive.css */
+/* This file handles all media queries for the site. */
+
+/* ---------------------------------------------------- */
+/* --- 1. Tablet View (992px and down) --- */
+/* ---------------------------------------------------- */
+@media (max-width: 992px) {
+
+    /* --- Header --- */
+    .main-header .nav-links {
+        display: none; /* Handled by Bootstrap toggler */
+    }
+
+    /* --- Video Player Page --- */
+    /* This stacks the video player and playlist vertically */
+    .video-player-container .col-lg-9,
+    .video-player-container .col-lg-3 {
+        width: 100%;
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .video-playlist {
+        margin-top: 2rem; /* Add space between player and playlist */
+        max-height: 50vh; /* Give the playlist a max height */
+    }
+
+    /* --- Home Page --- */
+    .hero-content h1 {
+        font-size: 2.5rem;
+    }
+    
+    .about-content {
+        text-align: center;
+    }
+
+    .about-image {
+        margin-top: 2rem;
+    }
+    
+    .testimonial-grid {
+        grid-template-columns: 1fr; /* Stack testimonials */
+    }
+
+    /* --- Auth Forms --- */
+    .form-container {
+        padding: 1.5rem;
+    }
+}
+
+
+/* ---------------------------------------------------- */
+/* --- 2. Mobile View (768px and down) --- */
+/* ---------------------------------------------------- */
+@media (max-width: 768px) {
+
+    /* --- General --- */
+    body {
+        font-size: 15px;
+    }
+
+    h1, .h1 { font-size: 2.2rem; }
+    h2, .h2 { font-size: 1.8rem; }
+    h3, .h3 { font-size: 1.5rem; }
+
+    /* --- Header --- */
+    .main-header .navbar-brand {
+        font-size: 1.25rem;
+    }
+
+    /* --- Footer --- */
+    .main-footer {
+        text-align: center;
+    }
+
+    .main-footer .footer-column {
+        margin-bottom: 2rem;
+    }
+
+    /* --- Home Page --- */
+    .hero-section {
+        padding: 4rem 0;
+    }
+
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+
+    .hero-content p {
+        font-size: 1rem;
+    }
+
+    .status-section .stat-item {
+        flex-basis: 50%; /* 2 items per row */
+        margin-bottom: 1.5rem;
+    }
+
+    .featured-courses-grid {
+        grid-template-columns: 1fr; /* Stack course cards */
+    }
+
+    .faq-accordion .accordion-button {
+        font-size: 1rem;
+    }
+
+    /* --- Auth Forms --- */
+    .form-container {
+        width: 100%;
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+
+    /* --- Offcanvas Sidebars --- */
+    /* Make sidebars wider on mobile */
+    #assistantOffcanvas,
+    #notesOffcanvas,
+    #transcriptOffcanvas {
+        width: 90vw !important; 
+        max-width: 400px;
+    }
+}
+
+
+/* ---------------------------------------------------- */
+/* --- 3. Small Mobile View (576px and down) --- */
+/* ---------------------------------------------------- */
+@media (max-width: 576px) {
+    
+    /* --- General --- */
+    .container, .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* --- Home Page --- */
+    .hero-content .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .status-section .stat-item {
+        flex-basis: 100%; /* 1 item per row */
+    }
+
+    .testimonial-card {
+        padding: 1.5rem;
+    }
+
+    /* --- Video Player Page --- */
+    .video-actions-toolbar {
+        /* Stack buttons vertically */
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .video-actions-toolbar .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* --- Auth Forms --- */
+    .form-container {
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+}

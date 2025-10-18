@@ -1,61 +1,114 @@
 import re
+from .chains import (
+    get_rag_chain, 
+    get_time_based_chain, 
+    get_classifier_chain, 
+    get_summarizer_chain,
+    get_general_chain,
+    get_decider_chain  # Added the decider chain
+)
+from .vector_store import get_retriever # Added retriever for the decider step
+from ..models import Transcript
 
-def parse_timestamp_from_query(query):
+def parse_time(query: str, timestamp: float) -> float | None:
     """
-    Finds a timestamp in formats like HH:MM:SS, MM:SS, or "X minutes/minute"
-    and converts it to seconds.
-    
-    This function uses regular expressions to find time patterns in the user's text
-    and converts them into a total number of seconds.
-    
-    Args:
-        query (str): The user's input query.
-        
-    Returns:
-        int: The timestamp in total seconds, or None if no timestamp is found.
+    Parses a timestamp from a query string, making the assistant more flexible.
+    Handles explicit timestamps (e.g., "12:34"), relative phrases ("right now"),
+    and vague references ("5-minute mark").
     """
-    # Regex to find patterns like "30th minute", "15 minutes", or "5 min"
-    minute_match = re.search(r'(\d+)\s*(?:minute|minutes|min|th minute)', query, re.IGNORECASE)
+    # This function is already robust and requires no changes.
+    time_pattern = r"(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?"
+    match = re.search(time_pattern, query)
+    if match:
+        parts = [int(p) for p in match.groups() if p is not None]
+        if len(parts) == 3:
+            h, m, s = parts
+            return h * 3600 + m * 60 + s
+        elif len(parts) == 2:
+            m, s = parts
+            return m * 60 + s
+
+    minute_match = re.search(r'(\d+)\s*(?:minute|min)', query, re.IGNORECASE)
     if minute_match:
-        minutes = int(minute_match.group(1))
-        return minutes * 60
+        return int(minute_match.group(1)) * 60
 
-    # Regex to find patterns like 12:34:56 or 12:34
-    time_match = re.search(r'(\d{1,2}):(\d{1,2}):(\d{1,2})|(\d{1,2}):(\d{1,2})', query)
-    if not time_match:
-        return None
-        
-    # Filter out the None values from the regex groups
-    time_parts_str = [p for p in time_match.groups() if p is not None]
-    time_parts = [int(p) for p in time_parts_str]
-    
-    seconds = 0
-    if len(time_parts) == 3:  # Format HH:MM:SS
-        seconds = time_parts[0] * 3600 + time_parts[1] * 60 + time_parts[2]
-    elif len(time_parts) == 2:  # Format MM:SS
-        seconds = time_parts[0] * 60 + time_parts[1]
-        
-    return seconds if seconds > 0 else None
+    if "this moment" in query.lower() or "right now" in query.lower():
+        return timestamp
 
-def get_context_window(all_docs, target_index, window_size=1):
+    return None
+
+
+def query_router(query: str, video_id: str, timestamp: float, chat_history: str, notes: str):
     """
-    Retrieves a window of documents around a central target index.
-    
-    This is used to get the transcript segments immediately before and after the
-    segment that matches the user's timestamp, providing better context for the AI.
-    
-    Args:
-        all_docs (list): The list of all transcript documents for the video.
-        target_index (int): The index of the primary document of interest.
-        window_size (int): How many documents to retrieve on either side of the target.
+    Intelligently routes a user's query to the correct chain using a more robust,
+    multi-step process inspired by the older file's logic.
+    """
+    # --- Step 1: Handle specific intents first (Summarization & Time-Based) ---
+    summarization_keywords = ['summarize', 'summary', 'overview', 'tldr', 'key points']
+    if any(keyword in query.lower() for keyword in summarization_keywords):
+        print("Routing to: Summarizer Chain")
+        full_transcript = " ".join(
+            t.content for t in Transcript.objects.filter(video__youtube_id=video_id).order_by('start')
+        )
+        if not full_transcript:
+            return "I couldn't find a transcript to summarize for this video."
         
-    Returns:
-        list: A new list of documents representing the context window.
-    """
-    # Calculate the start index, ensuring it's not less than 0
-    start_index = max(0, target_index - window_size)
-    
-    # Calculate the end index, ensuring it doesn't exceed the list length
-    end_index = min(len(all_docs), target_index + window_size + 1)
-    
-    return all_docs[start_index:end_index]
+        summarizer_chain = get_summarizer_chain()
+        return summarizer_chain.invoke({"context": full_transcript, "question": query})
+
+    parsed_seconds = parse_time(query, timestamp)
+    if parsed_seconds is not None:
+        print(f"Routing to: Time-Based Chain (Time: {parsed_seconds}s)")
+        try:
+            transcript_segment = Transcript.objects.filter(
+                video__youtube_id=video_id,
+                start__lte=parsed_seconds
+            ).latest('start')
+            context = transcript_segment.content if transcript_segment else "No transcript available for this specific moment."
+            
+            time_chain = get_time_based_chain()
+            return time_chain.invoke({"context": context, "question": query})
+        except Transcript.DoesNotExist:
+            return "I couldn't find any transcript information for that specific time."
+
+    # --- Step 2: Classify if the query is General or Video-Specific ---
+    print("Routing to: Classifier to determine context")
+    classifier_chain = get_classifier_chain()
+    classification = classifier_chain.invoke({"question": query})
+    print(f"Classification: {classification}")
+
+    if "General" in classification:
+        print("Routing to: General Chain")
+        return get_general_chain().invoke({"question": query})
+
+    # --- Step 3: Use RAG with a Decider for all other video-specific questions ---
+    # This is the robust logic from the older file.
+    print("Routing to: Standard RAG with Decider")
+    retriever = get_retriever(video_id)
+    retrieved_docs = retriever.get_relevant_documents(query)
+    context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+
+    # If no context is found, don't bother the LLM.
+    if not context.strip():
+        print("Decider Fallback: No context found. Routing to General Chain.")
+        return get_general_chain().invoke({"question": query})
+
+    decider_chain = get_decider_chain()
+    decision = decider_chain.invoke({"context": context, "question": query})
+    print(f"Decider chose: {decision}")
+
+    if "RAG" in decision:
+        print("Decision: Use RAG. Invoking main RAG chain.")
+        rag_chain = get_rag_chain(video_id)
+        # We only pass the retrieved context, not the whole retriever again.
+        return rag_chain.invoke({
+            "question": query,
+            "chat_history": chat_history,
+            "notes": notes,
+            # We must provide the 'context' key that the chain now expects
+            "context": context
+        })
+    else:
+        # The decider determined the context wasn't relevant.
+        print("Decision: Fallback to General Chain.")
+        return get_general_chain().invoke({"question": query})

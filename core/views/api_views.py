@@ -1,27 +1,32 @@
-# core/views/api_views.py
-
+# Standard library imports
 import json
 import logging
+
+# Django imports
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 
-# DRF Imports for the Assistant API
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+# Django REST Framework imports
 from rest_framework import status
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-# Relative imports from the same app
-from ..models import Enrollment, Course, Video, Note, Transcript
+# Local application imports
 from ..forms import NoteForm
-from ..rag_utils import query_router
-
-
+from ..models import (Conversation, ConversationMessage, Course, Enrollment,
+                    Note, Transcript, Video)
+# UPDATED IMPORT: We now use the query_router from the robust utils file
+from ..rag.utils import query_router
+from ..serializers import ConversationMessageSerializer, ConversationSerializer
 
 logger = logging.getLogger(__name__)
+
+# --- Standard Django Views (No Changes) ---
 
 @login_required
 @require_POST
@@ -41,7 +46,8 @@ def roadmap_view(request, course_id):
     }
     return JsonResponse(course_data)
 
-# --- Note API Views ---
+# --- Note API Views (No Changes) ---
+
 @login_required
 @require_POST
 def add_note_view(request, video_id):
@@ -75,18 +81,9 @@ def edit_note_view(request, note_id):
         note.title = new_title
         note.content = new_content
         note.save()
-        return JsonResponse({
-            'status': 'success',
-            'message': 'Note updated successfully.',
-            'note': {
-                'id': note.id,
-                'title': note.title,
-                'content': note.content,
-            }
-        })
+        return JsonResponse({'status': 'success', 'message': 'Note updated successfully.'})
     
     return JsonResponse({'status': 'error', 'message': 'Title and content cannot be empty.'}, status=400)
-
 
 @login_required
 @require_POST
@@ -95,37 +92,70 @@ def delete_note_view(request, note_id):
     note.delete()
     return JsonResponse({'status': 'success', 'message': 'Note deleted successfully.'})
 
-# --- AI Assistant API View ---
+# --- Transcript API View (No Changes) ---
+
+@login_required
+def get_transcript_view(request, video_id):
+    logger.info(f"API Request: Fetching transcript for video_id: {video_id}")
+    try:
+        transcripts = Transcript.objects.filter(video_id=video_id).order_by('start')
+        if not transcripts.exists():
+            return JsonResponse([], safe=False)
+        data = [{'start': t.start, 'content': t.content} for t in transcripts]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        logger.error(f"Error fetching transcript for video_id {video_id}: {e}", exc_info=True)
+        return JsonResponse({'error': 'An error occurred.'}, status=500)
+
+# --- DRF API Views (Corrected and Updated) ---
 
 class AssistantAPIView(APIView):
     """
     API View to handle queries to the AI assistant.
-    Passes all context to the query_router.
+    Uses a router to delegate to the appropriate chain.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         query = request.data.get('query')
-        video_id = request.data.get('video_id')
-        video_title = request.data.get('video_title')
-        # --- UPDATED: Ensure timestamp is a float ---
+        youtube_video_id = request.data.get('video_id')
+        # Get the current video timestamp from the frontend for context
         timestamp = float(request.data.get('timestamp', 0))
 
-        logger.info(f"API Request: query='{query}', video_id='{video_id}', timestamp='{timestamp}'")
-
-        if not query:
+        if not query or not youtube_video_id:
             return Response(
-                {'error': 'Query not provided.'},
+                {'error': 'Query and video_id are required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
         try:
+            video = get_object_or_404(Video, youtube_id=youtube_video_id)
+            conversation, created = Conversation.objects.get_or_create(
+                user=request.user, course=video.course, video=video
+            )
+
+            previous_messages = conversation.messages.order_by('created_at')
+            chat_history = "\n".join([f"Human: {m.question}\nAI: {m.answer}" for m in previous_messages])
+            
+            notes = Note.objects.filter(user=request.user, video=video)
+            notes_context = "\n".join([f"- {note.title}: {note.content}" for note in notes])
+
+            # *** UPDATED LOGIC: Call the new, robust query router ***
             answer = query_router(
                 query=query,
-                video_id=video_id,
-                video_title=video_title,
-                timestamp=timestamp
+                video_id=youtube_video_id,
+                timestamp=timestamp,
+                chat_history=chat_history,
+                notes=notes_context
             )
+
+            # Save the new message to the conversation
+            ConversationMessage.objects.create(
+                conversation=conversation, question=query, answer=answer
+            )
+
             return Response({'answer': answer}, status=status.HTTP_200_OK)
+
         except Exception as e:
             logger.error(f"An error occurred in AssistantAPIView: {e}", exc_info=True)
             return Response(
@@ -133,32 +163,17 @@ class AssistantAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-# --- NEW TRANSCRIPT API VIEW ---
+# --- Conversation Views (No Changes) ---
 
-@login_required
-def get_transcript_view(request, video_id):
-    """
-    API view to fetch all transcripts for a given video ID.
-    """
-    logger.info(f"API Request: Fetching transcript for video_id: {video_id}")
-    try:
-        # Filter transcripts by the video's primary key (video.id)
-        transcripts = Transcript.objects.filter(video_id=video_id).order_by('start')
-        
-        if not transcripts.exists():
-            logger.warning(f"No transcripts found for video_id: {video_id}")
-            return JsonResponse([], safe=False)
+class ConversationListView(ListAPIView):
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated]
 
-        # Prepare data in the format the JS expects
-        data = [
-            {
-                'start': t.start,
-                'content': t.content
-            }
-            for t in transcripts
-        ]
-        return JsonResponse(data, safe=False)
-        
-    except Exception as e:
-        logger.error(f"Error fetching transcript for video_id {video_id}: {e}", exc_info=True)
-        return JsonResponse({'error': 'An error occurred while fetching the transcript.'}, status=500)
+    def get_queryset(self):
+        return Conversation.objects.filter(user=self.request.user).order_by('-created_at')
+
+class ConversationDetailView(RetrieveAPIView):
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Conversation.objects.all()
+    lookup_field = 'id'

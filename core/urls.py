@@ -15,7 +15,7 @@ urlpatterns = [
     path('login/', auth_views.login_view, name='login'),
     path('logout/', auth_views.logout_view, name='logout'),
     
-    # --- Standalone Roadmap URL (Corrected) ---
+    # --- Standalone Roadmap URL ---
     path('roadmap/<int:course_id>/', api_views.roadmap_view, name='roadmap'),
     
     # --- API Endpoint URLs ---
@@ -31,5 +31,11 @@ urlpatterns = [
 
     # Transcript API URL
     path('api/transcripts/<int:video_id>/', api_views.get_transcript_view, name='api_get_transcripts'),
+
+    # Conversation History API URLs
+    path('api/assistant/conversations/', api_views.ConversationListView.as_view(), name='conversation_list'),
+    path('api/assistant/conversations/<int:conversation_id>/', api_views.ConversationDetailView.as_view(), name='conversation_detail'),
 ]
+
+# Corrected handler for 404 Not Found errors
 handler404 = 'core.views.custom_404_view'
