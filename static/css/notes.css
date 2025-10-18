@@ -28,7 +28,7 @@
 .note-status-indicator {
     width: 0.625em;
     height: 0.625em;
-    background-color: #1677ff;
+    background-color: #592ab5;
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -118,7 +118,7 @@
 .note-popup-card .status-ind {
     width: 0.625em;
     height: 0.625em;
-    background-color: #1677ff;
+    background-color: #592ab5;
     margin-top: 0.375em;
     border-radius: 50%;
     flex-shrink: 0;
@@ -152,7 +152,7 @@
     font-size: 15px;
     background-color: transparent;
     font-weight: 600;
-    color: #1677ff;
+    color: #592ab5;
     border: none;
     cursor: pointer;
 }
@@ -160,8 +160,6 @@
 .note-popup-card .primary-cta:hover {
     text-decoration: underline;
 }
-
-/* static/css/notes.css */
 
 .note-full-content {
     font-size: 0.9rem;
@@ -171,3 +169,18 @@
     word-wrap: break-word; /* Prevents long words from overflowing */
 }
 /* --- END: Note Detail Pop-up Card Styles --- */
+
+/* --- START: Form Card Submit Button Styles --- */
+.form-card-submit {
+  background-color: purple;
+  border: none;
+  padding: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.form-card-submit:hover {
+  background-color: darkviolet;
+}
+/* --- END: Form Card Submit Button Styles --- */
