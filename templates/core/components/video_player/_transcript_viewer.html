@@ -1,22 +1,13 @@
-<aside id="transcript-section" class="transcript-terminal">
-    <div class="terminal-header">
-        <h5 class="terminal-header-title">Transcript</h5>
-        <button class="btn-close btn-close-white" aria-label="Close"></button>
-    </div>
-
-    <div class="terminal-body" id="transcript-container">
-        <!-- Loop through the new transcript model relationship -->
-        {% for line in video.transcripts.all %}
-            <!-- Use the new field name 'start' -->
-            <p class="transcript-line" data-start="{{ line.start }}">
-                <!-- Format the timestamp directly in the template -->
-                <span class="timestamp">[{{ line.start|floatformat:2 }}s]</span>
-                <!-- Use the new field name 'content' -->
-                <span class="text-content">{{ line.content }}</span>
-            </p>
-        {% empty %}
-            <!-- This part runs if no transcripts are found -->
-            <p class="text-muted">Transcript is not available for this video.</p>
-        {% endfor %}
-    </div>
-</aside>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="transcriptOffcanvas" aria-labelledby="transcriptOffcanvasLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="transcriptOffcanvasLabel">
+        <i class="far fa-file-alt me-1"></i>
+        Transcript
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div id="transcript-content" class="transcript-content-body">
+        </div>
+  </div>
+</div>

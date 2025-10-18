@@ -28,5 +28,8 @@ urlpatterns = [
     
     # AI Assistant API URL
     path('api/assistant/', api_views.AssistantAPIView.as_view(), name='assistant_api'),
+
+    # Transcript API URL
+    path('api/transcripts/<int:video_id>/', api_views.get_transcript_view, name='api_get_transcripts'),
 ]
 handler404 = 'core.views.custom_404_view'

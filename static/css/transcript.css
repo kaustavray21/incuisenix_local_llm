@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap');
+
+/* --- NEW: Main Offcanvas Sidebar (Light Theme) --- */
+#transcriptOffcanvas {
+    background-color: #ffffff;
+    color: #333333;
+    font-family: 'Fira Code', 'Courier New', monospace;
+}
+
+/* --- UPDATED: Offcanvas Header (Purple Theme) --- */
+#transcriptOffcanvas .offcanvas-header {
+    background-color: #9370DB; /* Purple background */
+    border-bottom: 1px solid #7b1fa2; /* Darker purple border */
+}
+
+/* --- UPDATED: Offcanvas Title (Purple Theme) --- */
+#transcriptOffcanvas .offcanvas-title {
+    font-family: 'Instrument Serif', serif;
+    color: #ffffff; /* White text and icon */
+    font-size: 1.75rem;
+    margin: 0;
+}
+
+/* --- UPDATED: Offcanvas Close Button (Purple Theme) --- */
+#transcriptOffcanvas .btn-close {
+    /* This filter makes the default Bootstrap icon white */
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+/* --- END OF HEADER UPDATES --- */
+
+
+/* --- NEW: Offcanvas Body --- */
+#transcriptOffcanvas .offcanvas-body {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+}
+
+/* --- UPDATED: This is the new scrollable content area --- */
+#transcript-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    height: 100%;
+    background-color: #ffffff;
+}
+
+/* --- Scrollbar Styling (Light Theme) --- */
+#transcript-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#transcript-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#transcript-content::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1;
+    border-radius: 4px;
+}
+
+/* --- Styles for transcript lines --- */
+.transcript-line {
+    line-height: 1.6;
+    padding: 0.75rem 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.transcript-line:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.transcript-line .transcript-timestamp {
+    color: #9370DB; /* Purple timestamp */
+    font-weight: bold;
+    margin-right: 0.75rem;
+}
+
+.transcript-line .text-content {
+    color: #333333;
+}
+
+.transcript-line:hover {
+    background-color: #eeeeee;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.transcript-line:hover .text-content {
+    color: #000000;
+}
+
+.transcript-line:hover .transcript-timestamp {
+    color: #7b1fa2; /* Darker purple on hover */
+}
+
+.transcript-line.active {
+    background-color: rgba(147, 112, 219, 0.2);
+    box-shadow: 0 0 10px rgba(147, 112, 219, 0.4);
+    border-radius: 4px;
+}
+
+.transcript-line.active .text-content {
+    color: #000000;
+}

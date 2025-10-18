@@ -15,9 +15,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
 # Relative imports from the same app
-from ..models import Enrollment, Course, Video, Note
+from ..models import Enrollment, Course, Video, Note, Transcript
 from ..forms import NoteForm
 from ..rag_utils import query_router
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +132,33 @@ class AssistantAPIView(APIView):
                 {'error': 'An error occurred while processing your request.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+# --- NEW TRANSCRIPT API VIEW ---
+
+@login_required
+def get_transcript_view(request, video_id):
+    """
+    API view to fetch all transcripts for a given video ID.
+    """
+    logger.info(f"API Request: Fetching transcript for video_id: {video_id}")
+    try:
+        # Filter transcripts by the video's primary key (video.id)
+        transcripts = Transcript.objects.filter(video_id=video_id).order_by('start')
+        
+        if not transcripts.exists():
+            logger.warning(f"No transcripts found for video_id: {video_id}")
+            return JsonResponse([], safe=False)
+
+        # Prepare data in the format the JS expects
+        data = [
+            {
+                'start': t.start,
+                'content': t.content
+            }
+            for t in transcripts
+        ]
+        return JsonResponse(data, safe=False)
+        
+    except Exception as e:
+        logger.error(f"Error fetching transcript for video_id {video_id}: {e}", exc_info=True)
+        return JsonResponse({'error': 'An error occurred while fetching the transcript.'}, status=500)
