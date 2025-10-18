@@ -1,0 +1,123 @@
+/* --- AI Assistant Offcanvas Styles --- */
+
+#assistantOffcanvas .offcanvas-header {
+  background-color: #592ab5;
+  color: #ffffff;
+}
+
+#assistantOffcanvas .offcanvas-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+#assistantOffcanvas .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+#assistantOffcanvas .offcanvas-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background-color: #f8f9fa;
+}
+
+#assistant-chat-box {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background-color: #ffffff;
+}
+
+.chat-message {
+  padding: 0.75rem 1rem;
+  border-radius: 1.25rem;
+  max-width: 85%;
+  line-height: 1.4;
+  word-wrap: break-word;
+  font-size: 0.9rem;
+}
+
+.chat-message.user {
+  background-color: #6f42c1;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.chat-message.assistant {
+  background-color: #e9ecef;
+  color: #212529;
+  align-self: flex-start;
+  border-bottom-left-radius: 0.25rem;
+}
+
+/* Styles for loading indicator */
+.chat-message.loading {
+  background-color: #e9ecef;
+  color: #495057;
+  align-self: flex-start;
+  border-bottom-left-radius: 0.25rem;
+}
+
+/* Styles for markdown content */
+.chat-message.assistant p {
+  margin-bottom: 0.5rem;
+}
+.chat-message.assistant p:last-child {
+  margin-bottom: 0;
+}
+.chat-message.assistant code {
+  background-color: #d6d9dc;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.chat-message.assistant pre {
+  background-color: #212529;
+  color: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+.chat-message.assistant pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+#assistant-form {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+}
+
+#assistant-input {
+  background-color: #ffffff;
+  color: #212529;
+  border-color: #ced4da;
+}
+
+#assistant-input:focus {
+  background-color: #ffffff;
+  border-color: #5b369e;
+  box-shadow: 0 0 0 0.25rem rgba(111, 66, 193, 0.25);
+}
+
+#assistant-input::placeholder {
+  color: #6c757d;
+}
+
+#assistant-send-btn {
+  background-color: #532aa0;
+  border-color: #6f42c1;
+  color: #ffffff;
+}
+
+#assistant-send-btn:hover {
+  background-color: #946cda;
+  border-color: #5a359a;
+}

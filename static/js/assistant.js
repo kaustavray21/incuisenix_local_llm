@@ -1,12 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Correctly reference your existing chat elements
     const assistantForm = document.getElementById('assistant-form');
     const assistantInput = document.getElementById('assistant-input');
     const chatBox = document.getElementById('assistant-chat-box');
     const sendButton = document.getElementById('assistant-send-btn');
-    const assistantChat = document.getElementById('assistant-chat'); // Get the main assistant container
-
-    const videoId = assistantChat ? assistantChat.dataset.videoId : null;
+    
+    // --- THIS ID MUST MATCH YOUR HTML ---
+    const assistantChat = document.getElementById('assistantOffcanvas'); 
+    
+    // --- DELETED videoId FROM HERE ---
 
     function getCookie(name) {
         let cookieValue = null;
@@ -36,9 +37,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         showLoadingIndicator();
 
-        // --- UPDATED LOGIC ---
+        // --- MOVED videoId HERE ---
+        const videoId = assistantChat ? assistantChat.dataset.videoId : null;
         const videoTitle = document.getElementById('current-video-title').textContent.trim();
-        // Get timestamp if the player exists, otherwise default to 0
         const timestamp = window.videoPlayer ? window.videoPlayer.currentTime : 0;
 
         try {
@@ -48,12 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                // --- UPDATED: Send all context: query, id, title, and timestamp ---
                 body: JSON.stringify({ 
                     query: query, 
                     video_id: videoId,
                     video_title: videoTitle,
-                    timestamp: timestamp // Add the current timestamp
+                    timestamp: timestamp 
                 })
             });
 
