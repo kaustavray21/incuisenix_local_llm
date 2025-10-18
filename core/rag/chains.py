@@ -1,3 +1,5 @@
+# core/rag/chains.py
+
 from django.conf import settings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -132,4 +134,22 @@ def get_time_based_chain():
     """
     prompt = ChatPromptTemplate.from_template(prompt_template)
     llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY)
+    return prompt | llm | StrOutputParser()
+
+# --- NEW CHAIN FOR TITLE GENERATION ---
+def get_title_generation_chain():
+    """
+    Creates a chain that generates a concise title from a chat history.
+    """
+    prompt_template = """
+    You are a summarization expert. Based on the following chat history, create a concise, 5-word-or-less title for the conversation.
+    Respond with ONLY the title. Do not use quotation marks.
+
+    CHAT HISTORY:
+    {chat_history}
+
+    TITLE:
+    """
+    prompt = ChatPromptTemplate.from_template(prompt_template)
+    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY, temperature=0)
     return prompt | llm | StrOutputParser()

@@ -1,45 +1,47 @@
-<div
-  class="offcanvas offcanvas-end"
-  tabindex="-1"
-  id="assistantOffcanvas"
-  aria-labelledby="assistantOffcanvasLabel"
-  data-video-id="{{ video.youtube_id }}"
->
-  <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="assistantOffcanvasLabel">
-    <i class="fas fa-robot me-1"></i>
-      AI Assistant
-    </h5>
-    <button
-      type="button"
-      class="btn-close"
-      data-bs-dismiss="offcanvas"
-      aria-label="Close"
-    ></button>
-  </div>
-  <div class="offcanvas-body">
-    <div id="assistant-chat-box">
-      <div class="chat-message assistant">
-        Hello! I'm your AI assistant. Ask me anything about this course or the
-        current video.
-      </div>
-    </div>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="assistantOffcanvas" 
+     aria-labelledby="assistantOffcanvasLabel"
+     data-video-id="{{ video.youtube_id }}">
 
-    <form id="assistant-form" class="mt-auto">
-      {% csrf_token %}
-      <div class="input-group">
-        <input
-          type="text"
-          id="assistant-input"
-          class="form-control"
-          placeholder="Ask a question..."
-          required
-          autocomplete="off"
-        />
-        <button class="btn" type="submit" id="assistant-send-btn">
-          Send <i class="fas fa-paper-plane ms-1"></i>
-        </button>
-      </div>
-    </form>
+  <div class="offcanvas-header assistant-header">
+    
+    <div class="assistant-header-content">
+      <h5 class="offcanvas-title" id="assistantOffcanvasLabel">
+        <i class="fas fa-robot me-2"></i> AI Assistant
+      </h5>
+      
+      <small id="assistant-chat-title" class="d-block">
+        New Conversation
+      </small>
+    </div>
+    
+    <div class="assistant-header-controls">
+      <button id="new-chat-btn" class="btn btn-sm btn-outline-secondary" title="New Chat">
+        <i class="fas fa-plus"></i>
+      </button>
+      <button id="history-btn" class="btn btn-sm btn-outline-secondary ms-2" title="History">
+        <i class="fas fa-history"></i>
+      </button>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+  </div>
+
+  <div class="offcanvas-body assistant-body">
+
+    <div id="assistant-main-view">
+      <div id="assistant-chat-box" class="assistant-chat-box">
+        </div>
+      
+      <form id="assistant-form" class="assistant-form">
+        <div class="input-group">
+          <input type="text" id="assistant-input" class="form-control" placeholder="Ask about this video..." autocomplete="off">
+          <button id="assistant-send-btn" class="btn btn-primary" type="submit">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    {% include 'core/components/video_player/_assistant_history.html' %}
+
   </div>
 </div>

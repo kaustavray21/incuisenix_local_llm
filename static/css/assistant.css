@@ -1,18 +1,62 @@
+/* static/css/assistant.css */
+
 /* --- AI Assistant Offcanvas Styles --- */
 
 #assistantOffcanvas .offcanvas-header {
   background-color: #592ab5;
   color: #ffffff;
+  
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.assistant-header-content {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.assistant-header-controls {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 1rem;
 }
 
 #assistantOffcanvas .offcanvas-title {
   display: flex;
   align-items: center;
   font-weight: 600;
+  margin-bottom: 0;
+}
+
+#assistant-chat-title {
+  font-size: 0.85rem;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* --- FIX: Make subtitle text fully white --- */
+  color: #ffffff;
+}
+
+/* --- NEW: Style for header buttons --- */
+.assistant-header-controls .btn {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: transparent;
+}
+
+.assistant-header-controls .btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #ffffff;
 }
 
 #assistantOffcanvas .btn-close {
   filter: invert(1) grayscale(100%) brightness(200%);
+  margin: 0;
+  padding: 0.5rem;
 }
 
 #assistantOffcanvas .offcanvas-body {
@@ -20,6 +64,13 @@
   flex-direction: column;
   padding: 0;
   background-color: #f8f9fa;
+}
+
+/* --- NEW: Make the main view a flex container to push form down --- */
+#assistant-main-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 #assistant-chat-box {
@@ -55,7 +106,6 @@
   border-bottom-left-radius: 0.25rem;
 }
 
-/* Styles for loading indicator */
 .chat-message.loading {
   background-color: #e9ecef;
   color: #495057;
@@ -63,7 +113,6 @@
   border-bottom-left-radius: 0.25rem;
 }
 
-/* Styles for markdown content */
 .chat-message.assistant p {
   margin-bottom: 0.5rem;
 }
@@ -93,6 +142,8 @@
   padding: 1rem;
   background-color: #f8f9fa;
   border-top: 1px solid #dee2e6;
+  /* --- FIX: Ensure form doesn't shrink --- */
+  flex-shrink: 0;
 }
 
 #assistant-input {

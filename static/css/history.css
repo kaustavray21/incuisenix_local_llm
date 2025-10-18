@@ -1,0 +1,27 @@
+#assistant-history-list .list-group-item {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  transition: background-color 0.2s ease-in-out;
+}
+
+#assistant-history-list .list-group-item:hover {
+  background-color: #f8f9fa;
+}
+
+#assistant-history-list .list-group-item small {
+  color: #6c757d;
+  font-size: 0.85em;
+}
+
+#assistant-history-view {
+  /* This ensures the history view takes up the full space */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#assistant-history-list {
+  /* This makes the list scrollable if it gets too long */
+  flex-grow: 1;
+  overflow-y: auto;
+}
