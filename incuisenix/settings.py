@@ -144,3 +144,5 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 LOGIN_URL = 'home'
+
+FAISS_INDEX_ROOT = os.path.join(BASE_DIR, 'faiss_indexes')

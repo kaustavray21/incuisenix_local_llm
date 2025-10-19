@@ -33,8 +33,6 @@ urlpatterns = [
     path('api/transcripts/<int:video_id>/', api_views.get_transcript_view, name='api_get_transcripts'),
 
     # Conversation History API URLs
-    path('api/assistant/conversations/', api_views.ConversationListView.as_view(), name='conversation_list'),
-    path('api/assistant/conversations/<int:conversation_id>/', api_views.ConversationDetailView.as_view(), name='conversation_detail'),
 ]
 
 # Corrected handler for 404 Not Found errors

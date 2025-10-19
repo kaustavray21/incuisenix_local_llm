@@ -1,5 +1,3 @@
-# kaustavray21/incuisenix-2.0/InCuiseNix-2.0-7bf06a071d5eca737f6c16c2c6eadcbe4d1a2e6b/core/models.py
-
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -28,11 +26,11 @@ class Transcript(models.Model):
     content = models.TextField()
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='transcripts')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='transcripts')
-    # New field for direct access to the YouTube ID
     youtube_id = models.CharField(max_length=50, db_index=True, blank=True, null=True)
 
     def __str__(self):
         return f'{self.video.title} - {self.start}'
+
 class Enrollment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
@@ -58,25 +56,3 @@ class Note(models.Model):
 
     def __str__(self):
         return f'"{self.title}" by {self.user.username} for {self.video.title}'
-    
-class Conversation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    video = models.ForeignKey(Video, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255, default='New Conversation')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-class ConversationMessage(models.Model):
-    conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
-    question = models.TextField()
-    answer = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['created_at']
-
-    def __str__(self):
-        return f'Q: {self.question} - A: {self.answer}'

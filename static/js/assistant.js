@@ -1,19 +1,10 @@
-// static/js/assistant.js
-
 document.addEventListener('DOMContentLoaded', function () {
-    // --- Get all DOM elements for the main chat ---
     const assistantForm = document.getElementById('assistant-form');
     const assistantInput = document.getElementById('assistant-input');
     const chatBox = document.getElementById('assistant-chat-box');
     const sendButton = document.getElementById('assistant-send-btn');
     const assistantChat = document.getElementById('assistantOffcanvas'); 
-    const newChatBtn = document.getElementById('new-chat-btn');
-    const chatTitle = document.getElementById('assistant-chat-title');
 
-    // --- State Management ---
-    let currentConversationId = null;
-
-    // --- Utilities ---
     const converter = new showdown.Converter();
     
     function getCookie(name) {
@@ -31,8 +22,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return cookieValue;
     }
     const csrfToken = getCookie('csrftoken');
-
-    // --- Core Chat Functions ---
 
     const handleSubmit = async function (event) {
         event.preventDefault();
@@ -57,8 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({
                     query: query,
                     video_id: videoId,
-                    timestamp: timestamp,
-                    conversation_id: currentConversationId  // Send current session ID
+                    timestamp: timestamp
                 })
             });
 
@@ -74,12 +62,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (data.answer) {
                 appendMessage(data.answer, 'assistant');
-                
-                // --- UPDATED: Title Logic ---
-                currentConversationId = data.conversation_id;
-                // Update title from the server's response
-                chatTitle.textContent = data.conversation_name || `Conversation #${currentConversationId}`;
-
             } else {
                 appendMessage('Sorry, an error occurred. The assistant did not provide a valid answer.', 'assistant');
             }
@@ -90,49 +72,6 @@ document.addEventListener('DOMContentLoaded', function () {
             appendMessage(`Sorry, an error occurred: ${error.message}`, 'assistant');
         }
     };
-
-    // --- Session & History Loading Functions ---
-
-    function startNewChat() {
-        currentConversationId = null;
-        chatBox.innerHTML = '';
-        chatTitle.textContent = 'New Conversation';
-        appendMessage("Hi! How can I help you with this video?", 'assistant');
-    }
-
-    async function loadConversation(conversationId) {
-        chatBox.innerHTML = '';
-        showLoadingIndicator();
-
-        try {
-            const response = await fetch(`/api/assistant/conversations/${conversationId}/`);
-            if (!response.ok) {
-                throw new Error('Failed to load conversation messages.');
-            }
-            
-            // --- UPDATED: Handle new response structure ---
-            const data = await response.json();
-            const messages = data.messages;
-
-            removeLoadingIndicator();
-            
-            currentConversationId = data.id; // Set the active conversation
-            chatTitle.textContent = data.name; // Set the title from the response
-
-            messages.forEach(message => {
-                appendMessage(message.question, 'user');
-                appendMessage(message.answer, 'assistant');
-            });
-
-        } catch (error) {
-            console.error('Error loading conversation:', error);
-            removeLoadingIndicator();
-            appendMessage(`Error: Could not load conversation #${conversationId}.`, 'assistant');
-        }
-    }
-
-
-    // --- UI Helper Functions ---
 
     function appendMessage(message, sender) {
         const messageElement = document.createElement('div');
@@ -166,7 +105,6 @@ document.addEventListener('DOMContentLoaded', function () {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // --- FIX: Renamed this function (removed underscore) ---
     function removeLoadingIndicator() {
         if (sendButton) sendButton.disabled = false;
         const loadingElement = document.getElementById('loading-indicator');
@@ -175,26 +113,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- Event Listeners ---
     if (assistantForm) {
         assistantForm.addEventListener('submit', handleSubmit);
     }
-    if (newChatBtn) {
-        newChatBtn.addEventListener('click', startNewChat);
-    }
     
-    // --- Listen for the custom event from assistant_history.js ---
-    document.addEventListener('loadConversation', (e) => {
-        const { conversationId } = e.detail;
-        if (conversationId) {
-            loadConversation(conversationId);
-        }
-    });
-
-    // Optional: Start a new chat every time the panel is opened
     if (assistantChat) {
         assistantChat.addEventListener('show.bs.offcanvas', function () {
-            startNewChat();
+            chatBox.innerHTML = '';
+            appendMessage("Hi! How can I help you with this video?", 'assistant');
         });
     }
 });
