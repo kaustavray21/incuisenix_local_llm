@@ -32,16 +32,8 @@ class AssistantAPIView(APIView):
             video = get_object_or_404(Video, youtube_id=youtube_video_id)
             user = request.user
             
-            chat_history = ""
-            all_conversations = Conversation.objects.filter(user=user).order_by('created_at')
-            for convo in all_conversations:
-                messages = convo.messages.all().order_by('timestamp')
-                for msg in messages:
-                    chat_history += f"User: {msg.query}\nAssistant: {msg.answer}\n"
-            
             conversation = None
-            # --- NEW: Flag to track if we create a conversation in *this* request ---
-            is_newly_created = False 
+            chat_history_messages = []
             
             if conversation_id and not force_new:
                 try:
@@ -51,21 +43,28 @@ class AssistantAPIView(APIView):
             
             if not conversation and not force_new:
                 conversation = Conversation.objects.filter(user=user, video=video).order_by('-created_at').first()
+
+            if conversation:
+                messages = conversation.messages.all().order_by('timestamp')
+                for msg in messages:
+                    chat_history_messages.append(f"User: {msg.query}")
+                    chat_history_messages.append(f"Assistant: {msg.answer}")
             
             if not conversation:
-                # Conversation needs to be created
+                initial_title = "New Conversation"
+                if not is_dummy_start_query:
+                    initial_title = query[:255]
+
                 conversation = Conversation.objects.create(
                     user=user,
                     video=video,
                     course=video.course,
-                    title="New Conversation" # Always use default on creation
+                    title=initial_title
                 )
-                # --- NEW: Set the flag ---
-                is_newly_created = True 
-                logger.info(f"Created new conversation {conversation.id}")
+                logger.info(f"Created new conversation {conversation.id} with title: {initial_title}")
 
+            chat_history = "\n".join(chat_history_messages)
 
-            # Only get AI answer and save message if it's not the dummy "Start" query
             if not is_dummy_start_query:
                 answer = query_router(
                     query=query,
@@ -81,13 +80,10 @@ class AssistantAPIView(APIView):
                     answer=answer
                 )
 
-                # --- UPDATED TITLE FIX ---
-                # Check if this conversation was *just* created AND title needs update
-                if is_newly_created and conversation.title == "New Conversation" and len(query.split()) >= 3:
+                if conversation.title == "New Conversation":
                     conversation.title = query[:255] 
                     conversation.save(update_fields=['title']) 
                     logger.info(f"Updated conversation {conversation.id} title to: {conversation.title}")
-                # --- END UPDATED TITLE FIX ---
 
             else:
                 answer = "Starting new chat..." 

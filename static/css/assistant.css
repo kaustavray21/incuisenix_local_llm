@@ -193,10 +193,22 @@
   background-color: #ffffff;
   border: 1px solid #dee2e6;
   border-radius: 0.375rem;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
+  /* --- NEW: Use flex for delete button --- */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
+
+/* --- NEW: Content wrapper for click --- */
+.conversation-card-content {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  flex-grow: 1;
+  /* --- NEW: Fix for text overflow --- */
+  min-width: 0; 
+}
+
 
 .conversation-card:hover {
   background-color: #f1ecfC;
@@ -214,7 +226,37 @@
   text-overflow: ellipsis;
 }
 
+.conversation-card-video {
+  font-size: 0.8rem;
+  color: #6c757d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block; /* --- NEW: Ensure it respects overflow --- */
+}
+
+
 .conversation-card-date {
   font-size: 0.8rem;
   color: #6c757d;
+  margin-top: 0.25rem; /* --- NEW: Add margin top --- */
+}
+
+/* --- NEW: Delete Button Styles --- */
+.delete-conversation-btn {
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.delete-conversation-btn:hover {
+  background-color: #f8d7da;
+  opacity: 1;
 }

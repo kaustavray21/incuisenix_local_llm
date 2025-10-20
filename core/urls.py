@@ -35,5 +35,8 @@ urlpatterns = [
     # --- NEW: Conversation History API URLs ---
     path('api/conversations/', api_conversation.get_conversation_list, name='get_conversation_list'),
     path('api/conversations/<int:conversation_id>/messages/', api_conversation.get_conversation_messages, name='get_conversation_messages'),
+    
+    # --- THIS LINE WAS MISSING, I'VE ADDED IT BACK ---
+    path('api/conversations/delete/<int:conversation_id>/', api_conversation.delete_conversation, name='delete_conversation'),
 ]
 handler404 = 'core.views.content_views.custom_404_view'

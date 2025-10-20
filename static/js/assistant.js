@@ -94,13 +94,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.answer) {
                  // Don't show the generic "Start" answer if it was forced
                  if (!options.forceNew || effectiveQuery !== "Start") {
-                    InCuiseNixAssistant.appendMessage(data.answer, 'assistant');
-                }
+                     InCuiseNixAssistant.appendMessage(data.answer, 'assistant');
+                 }
                 
-                if (data.conversation_id && currentVideoId) {
-                    currentConversationId = data.conversation_id;
-                    videoConversationMap[currentVideoId] = currentConversationId;
-                }
+                 if (data.conversation_id && currentVideoId) {
+                     currentConversationId = data.conversation_id;
+                     videoConversationMap[currentVideoId] = currentConversationId;
+                 }
             } else {
                 InCuiseNixAssistant.appendMessage('Sorry, an error occurred. The assistant did not provide a valid answer.', 'assistant');
             }
@@ -153,6 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
             historyView.style.display = 'none';
         }
     }
+
     InCuiseNixAssistant.appendMessage = function(message, sender) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', sender);
@@ -165,9 +166,11 @@ document.addEventListener('DOMContentLoaded', function () {
         chatBox.appendChild(messageElement);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+
     InCuiseNixAssistant.clearChatBox = function() {
         chatBox.innerHTML = '';
     }
+
     InCuiseNixAssistant.setActiveConversation = function(videoId, convId) {
         currentVideoId = videoId;
         currentConversationId = convId;
@@ -175,6 +178,27 @@ document.addEventListener('DOMContentLoaded', function () {
             videoConversationMap[videoId] = convId;
         }
     }
+
+    // --- NEW: Expose resetChat and getState for history module ---
+    InCuiseNixAssistant.resetChat = function() {
+        if (currentVideoId) {
+            videoConversationMap[currentVideoId] = null;
+            currentConversationId = null;
+        }
+        clearChatScreen();
+        // Optionally, you might want to send a "forceNew" request here
+        // if your backend requires it to register the "New Conversation"
+        // handleSubmit(null, { forceNew: true });
+    }
+
+    InCuiseNixAssistant.getState = function() {
+        return {
+            currentVideoId: currentVideoId,
+            currentConversationId: currentConversationId
+        };
+    }
+    // --- End New ---
+
 
     // --- Event Listeners ---
     if (assistantForm) {

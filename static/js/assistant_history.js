@@ -11,7 +11,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const historyList = document.getElementById('assistant-history-list');
     const historyView = document.getElementById('assistant-history-view');
 
-    // Function to load the list of past conversations (global)
+    /**
+     * Helper function to get a cookie value by name.
+     */
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    /**
+     * Loads the list of past conversations from the API.
+     */
     async function loadConversationHistory() {
         historyList.innerHTML = '<p class="text-center">Loading history...</p>';
         const apiUrl = '/api/conversations/'; 
@@ -37,23 +57,21 @@ document.addEventListener('DOMContentLoaded', function () {
             conversations.forEach(convo => {
                 const card = document.createElement('div');
                 card.className = 'conversation-card';
-                card.dataset.conversationId = convo.id;
-                card.dataset.videoId = convo.video_id; 
+                // --- We no longer need data attributes on the card itself ---
                 
+                // --- UPDATED: Added delete button and a content wrapper ---
                 card.innerHTML = `
-                    <div class="conversation-card-title">${convo.title}</div>
-                    <small class="conversation-card-video text-muted" title="${convo.course_title} | ${convo.video_title}">
-                        ${convo.video_title} 
-                    </small>
-                    <div class="conversation-card-date">${convo.created_at}</div>
+                    <div class="conversation-card-content" data-conversation-id="${convo.id}" data-video-id="${convo.video_id}">
+                        <div class="conversation-card-title">${convo.title}</div>
+                        <small class="conversation-card-video text-muted" title="${convo.course_title} | ${convo.video_title}">
+                            ${convo.video_title} 
+                        </small>
+                        <div class="conversation-card-date">${convo.created_at}</div>
+                    </div>
+                    <button class="delete-conversation-btn" data-id="${convo.id}" title="Delete chat">&times;</button>
                 `;
                 
-                // Add click event listener directly here
-                card.addEventListener('click', () => {
-                    // Pass the necessary data directly
-                    loadConversationMessages(convo.id, convo.video_id); 
-                });
-                
+                // --- UPDATED: Replaced with a single delegated listener below ---
                 historyList.appendChild(card);
             });
 
@@ -63,7 +81,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- UPDATED: Accepts conversationId and videoId directly ---
+    /**
+     * Loads messages for a specific conversation.
+     */
     async function loadConversationMessages(conversationId, videoId) { 
         if (!conversationId || !videoId) {
              console.error("Missing conversationId or videoId when loading messages");
@@ -87,33 +107,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
              if (!Array.isArray(messages)) {
                  throw new Error('Invalid messages format received.');
-            }
+             }
 
             InCuiseNixAssistant.clearChatBox(); // Clear loading message
             
-            // --- FIX: Set active conversation *before* appending messages ---
-            // This ensures the main script knows the context *before* display
             InCuiseNixAssistant.setActiveConversation(videoId, conversationId);
 
-            // Append messages *after* setting the state
             messages.forEach(msg => {
                 InCuiseNixAssistant.appendMessage(msg.query, 'user');
                 InCuiseNixAssistant.appendMessage(msg.answer, 'assistant');
             });
             
-            // Switch back to the chat view *after* messages are added
             InCuiseNixAssistant.toggleHistoryView(false); 
 
         } catch (error) {
             console.error('Error loading messages:', error);
             InCuiseNixAssistant.clearChatBox();
             InCuiseNixAssistant.appendMessage(`Sorry, an error occurred while loading this conversation: ${error.message}`, 'assistant');
-             // Optionally switch back to history view on error
-            // InCuiseNixAssistant.toggleHistoryView(true); 
         }
     }
 
-    // --- Event Listener ---
+    /**
+     * --- NEW: Deletes a conversation from the server and UI ---
+     */
+    async function deleteConversation(conversationId, cardElement) {
+        if (!confirm('Are you sure you want to delete this conversation?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/conversations/delete/${conversationId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.status === 204) {
+                // 1. Remove from UI
+                cardElement.remove();
+                
+                // 2. If it was the currently active chat, reset the chat window
+                const currentState = InCuiseNixAssistant.getState();
+                if (currentState.currentConversationId == conversationId) {
+                    InCuiseNixAssistant.resetChat();
+                }
+
+                // 3. Check if list is now empty
+                if (historyList.children.length === 0) {
+                     historyList.innerHTML = '<p class="text-center">No conversation history found.</p>';
+                }
+
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to delete conversation:', errorData.error);
+                alert('Failed to delete conversation.');
+            }
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            alert('An error occurred while deleting the chat.');
+        }
+    }
+
+
+    // --- Event Listeners ---
 
     if (historyButton) {
         historyButton.addEventListener('click', () => {
@@ -122,6 +180,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 loadConversationHistory();
             }
             InCuiseNixAssistant.toggleHistoryView(!isHistoryVisible);
+        });
+    }
+
+    // --- NEW: Delegated Event Listener for the history list ---
+    // This replaces adding a listener to every single card.
+    if (historyList) {
+        historyList.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-conversation-btn');
+            const cardContent = e.target.closest('.conversation-card-content');
+
+            if (deleteBtn) {
+                // --- Handle Delete Click ---
+                e.stopPropagation();
+                const conversationId = deleteBtn.dataset.id;
+                const cardElement = deleteBtn.closest('.conversation-card');
+                deleteConversation(conversationId, cardElement);
+            
+            } else if (cardContent) {
+                // --- Handle Load Click ---
+                const conversationId = cardContent.dataset.conversationId;
+                const videoId = cardContent.dataset.videoId;
+                loadConversationMessages(conversationId, videoId);
+            }
         });
     }
 });
