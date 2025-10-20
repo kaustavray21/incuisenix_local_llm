@@ -1,11 +1,22 @@
+// Create a global namespace to share functions
+var InCuiseNixAssistant = InCuiseNixAssistant || {};
+
 document.addEventListener('DOMContentLoaded', function () {
     const assistantForm = document.getElementById('assistant-form');
     const assistantInput = document.getElementById('assistant-input');
     const chatBox = document.getElementById('assistant-chat-box');
     const sendButton = document.getElementById('assistant-send-btn');
     const assistantChat = document.getElementById('assistantOffcanvas'); 
+    
+    const newChatButton = document.getElementById('assistant-new-chat-btn');
+    const mainChatView = document.getElementById('assistant-main-view');
+    const historyView = document.getElementById('assistant-history-view');
 
     const converter = new showdown.Converter();
+    
+    let videoConversationMap = {};
+    let currentVideoId = null;
+    let currentConversationId = null;
     
     function getCookie(name) {
         let cookieValue = null;
@@ -23,18 +34,41 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const csrfToken = getCookie('csrftoken');
 
-    const handleSubmit = async function (event) {
-        event.preventDefault();
+    // --- UPDATED: handleSubmit now accepts an options object ---
+    const handleSubmit = async function (event, options = {}) {
+        if (event) {
+            event.preventDefault();
+        }
+        
         const query = assistantInput.value.trim();
-        if (!query) return;
+        // Don't submit if input is empty unless forced 
+        if (!query && !options.forceNew) return; 
 
-        appendMessage(query, 'user');
-        assistantInput.value = '';
+        // Use a default initial query if forced and input is empty
+        const effectiveQuery = query || "Start"; 
+
+        // Only append user message if it wasn't forced and not empty
+        if (!options.forceNew && query) { 
+            InCuiseNixAssistant.appendMessage(query, 'user');
+        }
+        assistantInput.value = ''; 
 
         showLoadingIndicator();
 
-        const videoId = assistantChat ? assistantChat.dataset.videoId : null;
         const timestamp = window.videoPlayer ? window.videoPlayer.currentTime : 0;
+        
+        // --- NEW: Prepare data payload, including force_new flag ---
+        const requestData = {
+            query: effectiveQuery,
+            video_id: currentVideoId, 
+            timestamp: timestamp,
+            conversation_id: currentConversationId 
+        };
+        // *** THIS IS THE KEY CHANGE FOR THE BUG FIX ***
+        if (options.forceNew) {
+            requestData.force_new = true; 
+        }
+        // *** END KEY CHANGE ***
 
         try {
             const response = await fetch('/api/assistant/', {
@@ -43,11 +77,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({
-                    query: query,
-                    video_id: videoId,
-                    timestamp: timestamp
-                })
+                // Send the prepared data
+                body: JSON.stringify(requestData)
             });
 
             removeLoadingIndicator();
@@ -61,32 +92,25 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
 
             if (data.answer) {
-                appendMessage(data.answer, 'assistant');
+                 // Don't show the generic "Start" answer if it was forced
+                 if (!options.forceNew || effectiveQuery !== "Start") {
+                    InCuiseNixAssistant.appendMessage(data.answer, 'assistant');
+                }
+                
+                if (data.conversation_id && currentVideoId) {
+                    currentConversationId = data.conversation_id;
+                    videoConversationMap[currentVideoId] = currentConversationId;
+                }
             } else {
-                appendMessage('Sorry, an error occurred. The assistant did not provide a valid answer.', 'assistant');
+                InCuiseNixAssistant.appendMessage('Sorry, an error occurred. The assistant did not provide a valid answer.', 'assistant');
             }
 
         } catch (error) {
             console.error('Error:', error);
             removeLoadingIndicator();
-            appendMessage(`Sorry, an error occurred: ${error.message}`, 'assistant');
+            InCuiseNixAssistant.appendMessage(`Sorry, an error occurred: ${error.message}`, 'assistant');
         }
     };
-
-    function appendMessage(message, sender) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('chat-message', sender);
-
-        if (sender === 'assistant') {
-            const htmlContent = converter.makeHtml(message);
-            messageElement.innerHTML = htmlContent;
-        } else {
-            messageElement.textContent = message;
-        }
-
-        chatBox.appendChild(messageElement);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
 
     function showLoadingIndicator() {
         if (sendButton) sendButton.disabled = true;
@@ -112,15 +136,82 @@ document.addEventListener('DOMContentLoaded', function () {
             loadingElement.remove();
         }
     }
+    
+    function clearChatScreen() {
+        InCuiseNixAssistant.clearChatBox();
+        InCuiseNixAssistant.appendMessage("Hi! How can I help you with this video?", 'assistant');
+        InCuiseNixAssistant.toggleHistoryView(false); 
+    }
 
+    // --- Exposed Functions ---
+    InCuiseNixAssistant.toggleHistoryView = function(showHistory) {
+        if (showHistory) {
+            mainChatView.style.display = 'none';
+            historyView.style.display = 'flex'; 
+        } else {
+            mainChatView.style.display = 'flex'; 
+            historyView.style.display = 'none';
+        }
+    }
+    InCuiseNixAssistant.appendMessage = function(message, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message', sender);
+        if (sender === 'assistant') {
+            const htmlContent = converter.makeHtml(message);
+            messageElement.innerHTML = htmlContent;
+        } else {
+            messageElement.textContent = message;
+        }
+        chatBox.appendChild(messageElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    InCuiseNixAssistant.clearChatBox = function() {
+        chatBox.innerHTML = '';
+    }
+    InCuiseNixAssistant.setActiveConversation = function(videoId, convId) {
+        currentVideoId = videoId;
+        currentConversationId = convId;
+        if (videoId) {
+            videoConversationMap[videoId] = convId;
+        }
+    }
+
+    // --- Event Listeners ---
     if (assistantForm) {
-        assistantForm.addEventListener('submit', handleSubmit);
+        assistantForm.addEventListener('submit', handleSubmit); // No options passed for normal submit
+    }
+    
+    if (newChatButton) {
+        // --- UPDATED: "New Chat" button listener ---
+        newChatButton.addEventListener('click', () => {
+            console.log("New Chat button clicked, forcing new conversation.");
+            // Clear local state
+            if (currentVideoId) {
+                videoConversationMap[currentVideoId] = null;
+                currentConversationId = null;
+            }
+            // Clear screen
+            clearChatScreen();
+            
+            // --- NEW: Trigger handleSubmit with forceNew flag ---
+            // Sends a dummy "Start" query to backend to force creation
+            handleSubmit(null, { forceNew: true }); // Pass forceNew option
+            // Note: Input field remains empty for user
+        });
     }
     
     if (assistantChat) {
         assistantChat.addEventListener('show.bs.offcanvas', function () {
-            chatBox.innerHTML = '';
-            appendMessage("Hi! How can I help you with this video?", 'assistant');
+            const newVideoId = assistantChat.dataset.videoId;
+            if (newVideoId !== currentVideoId) {
+                console.log(`Video changed from ${currentVideoId} to ${newVideoId}`);
+                currentVideoId = newVideoId;
+                currentConversationId = videoConversationMap[currentVideoId] || null;
+                clearChatScreen();
+            } else {
+                console.log(`Resuming chat for video ${currentVideoId}`);
+                InCuiseNixAssistant.toggleHistoryView(false); // Ensure chat view is visible
+            }
         });
     }
 });

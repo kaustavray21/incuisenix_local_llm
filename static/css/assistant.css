@@ -172,3 +172,49 @@
   background-color: #946cda;
   border-color: #5a359a;
 }
+
+/* --- NEW: History View Styles --- */
+#assistant-history-view {
+  padding: 1rem;
+  height: 100%;
+  display: none; /* This will be toggled by JS */
+  flex-direction: column;
+}
+
+#assistant-history-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation-card {
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.conversation-card:hover {
+  background-color: #f1ecfC;
+  border-color: #c6b8e6;
+}
+
+.conversation-card-title {
+  font-weight: 600;
+  color: #6f42c1;
+  margin-bottom: 0.25rem;
+  
+  /* Truncate long titles */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-card-date {
+  font-size: 0.8rem;
+  color: #6c757d;
+}

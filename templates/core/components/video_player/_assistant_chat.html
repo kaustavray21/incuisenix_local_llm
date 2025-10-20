@@ -11,6 +11,13 @@
     </div>
     
     <div class="assistant-header-controls">
+      
+      <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="assistant-history-btn" title="View History">
+        <i class="fas fa-history"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="assistant-new-chat-btn" title="New Chat">
+        <i class="fas fa-plus"></i>
+      </button>
       <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
   </div>
@@ -31,5 +38,10 @@
       </form>
     </div>
     
-  </div>
+    <div id="assistant-history-view" style="display: none;">
+      <h5 class="text-center mb-3">Chat History</h5>
+      <div id="assistant-history-list" class="assistant-history-list">
+        </div>
+    </div>
+    </div>
 </div>

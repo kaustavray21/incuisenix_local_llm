@@ -1,8 +1,7 @@
 # core/urls.py
 
 from django.urls import path
-from .views import auth_views, content_views,api_course, api_note, api_assistant, api_transcript
-
+from .views import auth_views, content_views,api_course, api_note, api_assistant, api_transcript, api_conversation
 
 urlpatterns = [
     # --- Content Page URLs ---
@@ -33,7 +32,8 @@ urlpatterns = [
     # Transcript API URL
     path('api/transcripts/<int:video_id>/', api_transcript.get_transcript_view, name='api_get_transcripts'),
 
-    # Conversation History API URLs
+    # --- NEW: Conversation History API URLs ---
+    path('api/conversations/', api_conversation.get_conversation_list, name='get_conversation_list'),
+    path('api/conversations/<int:conversation_id>/messages/', api_conversation.get_conversation_messages, name='get_conversation_messages'),
 ]
-
-handler404 = 'core.views.custom_404_view'
+handler404 = 'core.views.content_views.custom_404_view'

@@ -56,3 +56,29 @@ class Note(models.Model):
 
     def __str__(self):
         return f'"{self.title}" by {self.user.username} for {self.video.title}'
+    
+    
+class Conversation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='conversations')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='conversations')
+    title = models.CharField(max_length=255, default="New Conversation")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'"{self.title}" by {self.user.username} for {self.video.title}'
+
+class ConversationMessage(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    query = models.TextField()
+    answer = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f'Query in "{self.conversation.title}" at {self.timestamp}' 
