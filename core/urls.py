@@ -1,7 +1,8 @@
 # core/urls.py
 
 from django.urls import path
-from .views import auth_views, content_views, api_views
+from .views import auth_views, content_views,api_course, api_note, api_assistant, api_transcript
+
 
 urlpatterns = [
     # --- Content Page URLs ---
@@ -16,24 +17,23 @@ urlpatterns = [
     path('logout/', auth_views.logout_view, name='logout'),
     
     # --- Standalone Roadmap URL ---
-    path('roadmap/<int:course_id>/', api_views.roadmap_view, name='roadmap'),
+    path('roadmap/<int:course_id>/', api_course.roadmap_view, name='roadmap'),
     
     # --- API Endpoint URLs ---
-    path('api/enroll/<int:course_id>/', api_views.enroll_view, name='enroll'),
+    path('api/enroll/<int:course_id>/', api_course.enroll_view, name='enroll'),
     
     # Note API URLs
-    path('api/notes/add/<int:video_id>/', api_views.add_note_view, name='add_note'),
-    path('api/notes/edit/<int:note_id>/', api_views.edit_note_view, name='edit_note'),
-    path('api/notes/delete/<int:note_id>/', api_views.delete_note_view, name='delete_note'),
+    path('api/notes/add/<int:video_id>/', api_note.add_note_view, name='add_note'),
+    path('api/notes/edit/<int:note_id>/', api_note.edit_note_view, name='edit_note'),
+    path('api/notes/delete/<int:note_id>/', api_note.delete_note_view, name='delete_note'),
     
     # AI Assistant API URL
-    path('api/assistant/', api_views.AssistantAPIView.as_view(), name='assistant_api'),
+    path('api/assistant/', api_assistant.AssistantAPIView.as_view(), name='assistant_api'),
 
     # Transcript API URL
-    path('api/transcripts/<int:video_id>/', api_views.get_transcript_view, name='api_get_transcripts'),
+    path('api/transcripts/<int:video_id>/', api_transcript.get_transcript_view, name='api_get_transcripts'),
 
     # Conversation History API URLs
 ]
 
-# Corrected handler for 404 Not Found errors
 handler404 = 'core.views.custom_404_view'
