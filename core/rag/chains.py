@@ -7,7 +7,30 @@ from operator import itemgetter
 from .vector_store import get_retriever
 
 
-LLM_MODEL = "gemini-2.5-flash"
+LLM_MODEL = "gemini-2.5-flash" # Use flash for speed
+
+# --- NEW: A more advanced classifier ---
+def get_query_type_classifier_chain():
+    """
+    Classifies the user's question into one of three categories:
+    1.  Fetch_Notes: A request to list, summarize, or get all notes.
+    2.  RAG: A specific question about the video content that requires context.
+    3.  General: A general knowledge question not related to the video.
+    """
+    prompt = ChatPromptTemplate.from_template(
+        "Classify the user's question into one of three categories: 'Fetch_Notes', 'RAG', or 'General'.\n"
+        "1.  'Fetch_Notes' questions are requests to list, see, or get all personal notes. "
+        "    Examples: 'show me all my notes', 'what notes do I have?', 'list my notes for this video'.\n"
+        "2.  'RAG' questions ask something specific about the video content, the user's notes, or the transcript. "
+        "    Examples: 'what did the video say about variables?', 'explain my note on functions', 'what is a decorator?'.\n"
+        "3.  'General' questions are for information not in the video or notes. "
+        "    Examples: 'hello', 'who are you?', 'what is the capital of France?'.\n\n"
+        "Respond with ONLY the category name ('Fetch_Notes', 'RAG', or 'General').\n\n"
+        "Question: {question}\nCategory:"
+    )
+    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY, temperature=0)
+    return prompt | llm | StrOutputParser()
+# --- END NEW ---
 
 
 def get_rag_chain(video_id: str, user_id: int):
@@ -55,6 +78,7 @@ def get_general_chain():
     llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY)
     return prompt | llm | StrOutputParser()
 
+# --- OLD: This function is no longer used by utils.py but we can leave it ---
 def get_classifier_chain():
     prompt = ChatPromptTemplate.from_template(
         "Classify the user's question into one of two categories: 'Video-Specific' or 'General Knowledge'.\n"
@@ -65,6 +89,7 @@ def get_classifier_chain():
     llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY, temperature=0)
     return prompt | llm | StrOutputParser()
 
+# --- OLD: This function is no longer used by utils.py but we can leave it ---
 def get_decider_chain():
     prompt = ChatPromptTemplate.from_template(
         "You are a helpful routing assistant. Your job is to decide the best way to answer a user's question.\n"
