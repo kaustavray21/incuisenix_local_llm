@@ -2,6 +2,7 @@
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from ..models import Enrollment, Course, Video, Note # Use relative imports
 from ..forms import NoteForm # Use relative imports
 
@@ -16,8 +17,18 @@ def about_view(request):
 @login_required
 def dashboard_view(request):
     enrolled_courses = Enrollment.objects.filter(user=request.user).select_related('course')
+    
+    # Get all notes for the user, ordered by most recent
+    all_notes = Note.objects.filter(user=request.user).select_related('video', 'course').order_by('-created_at')
+    
+    # Paginate the notes, showing 6 per page
+    paginator = Paginator(all_notes, 6) 
+    page_number = request.GET.get('page')
+    notes_page_obj = paginator.get_page(page_number)
+
     context = {
-        'enrolled_courses': [enrollment.course for enrollment in enrolled_courses]
+        'enrolled_courses': [enrollment.course for enrollment in enrolled_courses],
+        'notes_page_obj': notes_page_obj
     }
     return render(request, 'core/dashboard.html', context)
 
