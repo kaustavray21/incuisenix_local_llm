@@ -7,11 +7,11 @@ import { formatTimestamp } from './utils.js';
 export function addNoteToUI(noteCardHTML) {
     const notesListContainer = document.getElementById('notes-list-container');
     const noNotesMessage = document.getElementById('no-notes-message');
-    
+
     if (noNotesMessage) {
         noNotesMessage.style.display = 'none';
     }
-    
+
     notesListContainer.insertAdjacentHTML('afterbegin', noteCardHTML);
 }
 
@@ -25,25 +25,23 @@ export function updateNoteInUI(note) {
 
     if (noteCard) {
         // 2. Find the title and content elements within that card.
-        //    (Assumes your note card has elements with class "note-title" and "note-content")
-        const titleElement = noteCard.querySelector('.note-title');
-        const contentElement = noteCard.querySelector('.note-content');
+        const titleElement = noteCard.querySelector('.note-title'); // Assuming class="note-title"
+        const contentElement = noteCard.querySelector('.note-content'); // Assuming class="note-content"
 
         if (titleElement) {
             titleElement.textContent = note.title;
         }
 
         if (contentElement) {
-            // Create a truncated preview for the content for display on the card
+            // Create a truncated preview for the content
             const contentPreview = note.content.substring(0, 100) + (note.content.length > 100 ? '...' : '');
             contentElement.textContent = contentPreview;
         }
 
         // 3. CRITICAL: Update the data attributes on the card itself.
-        //    This ensures that when you click "edit" or "view" again,
-        //    the modals are populated with the latest, correct data.
         noteCard.dataset.noteTitle = note.title;
         noteCard.dataset.noteContent = note.content;
+        // NOTE: Timestamp doesn't change on edit, so no need to update noteCard.dataset.noteTimestamp
     } else {
         console.error(`Could not find a note card with ID ${note.id} to update in the UI.`);
     }
@@ -58,7 +56,18 @@ export function populateEditModal(noteCard) {
     document.getElementById('edit-note-id').value = noteCard.dataset.noteId;
     document.getElementById('edit-note-title').value = noteCard.dataset.noteTitle;
     document.getElementById('edit-note-content').value = noteCard.dataset.noteContent;
-    
+
+    // *** THIS IS THE FIX ***
+    // Get the timestamp from the card's data attribute and set the hidden input's value
+    const timestamp = noteCard.dataset.noteTimestamp;
+    const timestampInput = document.getElementById('edit-note-timestamp');
+    if (timestampInput && timestamp !== undefined) {
+        timestampInput.value = timestamp;
+    } else {
+        console.error("Could not find timestamp data attribute or hidden input field.");
+        // Optionally handle this error, e.g., prevent modal from showing or show an error message
+    }
+
     // Show the modal using Bootstrap's API
     const editModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editNoteModal'));
     editModal.show();
@@ -78,7 +87,7 @@ export function showNotePopup(note) {
     popupTitle.textContent = note.title;
     popupContent.textContent = note.content;
     popupTimestamp.textContent = `Note at ${formatTimestamp(parseInt(note.timestamp, 10))}`;
-    
+
     // Make the popup visible
     notePopupOverlay.style.display = 'flex';
 }
