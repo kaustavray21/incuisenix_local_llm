@@ -1,11 +1,12 @@
 {% if page_obj.has_other_pages %}
 <nav aria-label="Page navigation" class="mt-4">
   <ul class="pagination justify-content-center">
+
     {% if page_obj.has_previous %}
     <li class="page-item">
       <a
         class="page-link"
-        href="?page={{ page_obj.previous_page_number }}"
+        href="?page={{ page_obj.previous_page_number }}{% if current_filters.sort_by %}&sort_by={{ current_filters.sort_by }}{% endif %}{% if current_filters.course_id %}&course_id={{ current_filters.course_id }}{% endif %}{% if current_filters.video_id %}&video_id={{ current_filters.video_id }}{% endif %}"
         aria-label="Previous"
       >
         <span aria-hidden="true">&laquo;</span>
@@ -30,7 +31,7 @@
         </li>
       {% else %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          <a class="page-link" href="?page={{ num }}{% if current_filters.sort_by %}&sort_by={{ current_filters.sort_by }}{% endif %}{% if current_filters.course_id %}&course_id={{ current_filters.course_id }}{% endif %}{% if current_filters.video_id %}&video_id={{ current_filters.video_id }}{% endif %}">{{ num }}</a>
         </li>
       {% endif %}
     {% endfor %}
@@ -39,7 +40,7 @@
     <li class="page-item">
       <a
         class="page-link"
-        href="?page={{ page_obj.next_page_number }}"
+        href="?page={{ page_obj.next_page_number }}{% if current_filters.sort_by %}&sort_by={{ current_filters.sort_by }}{% endif %}{% if current_filters.course_id %}&course_id={{ current_filters.course_id }}{% endif %}{% if current_filters.video_id %}&video_id={{ current_filters.video_id }}{% endif %}"
         aria-label="Next"
       >
         <span aria-hidden="true">&raquo;</span>
@@ -52,6 +53,7 @@
       </a>
     </li>
     {% endif %}
+    
   </ul>
 </nav>
 {% endif %}

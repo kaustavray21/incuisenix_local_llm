@@ -3,48 +3,10 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/notes.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
 {% endblock %}
 
 {% block content %}
-<style>
-  .dashboard-row {
-    min-height: 100%;
-  }
-  .sidebar {
-    padding-top: 1rem;
-    border-right: 1px solid #dee2e6;
-  }
-  .sidebar-sticky {
-    position: sticky;
-    top: 72px;
-    height: calc(100vh - 72px);
-    padding-top: 0.5rem;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  .sidebar .nav-link {
-    font-weight: 500;
-    color: #343a40;
-    transition: background-color 0.2s, color 0.2s;
-    border-radius: 0.25rem;
-    margin: 0.2rem 0;
-    display: flex; /* Use flexbox for alignment */
-    align-items: center; /* Vertically center icon and text */
-  }
-  .sidebar .nav-link:hover,
-  .sidebar .nav-link.active {
-    background-color: #e9ecef;
-  }
-  .sidebar .nav-link svg {
-    margin-right: 8px; /* Add space between icon and text */
-  }
-  /* Style for dashboard note content */
-  .note-content-preview {
-    font-size: 0.9rem;
-    color: #6c757d;
-  }
-</style>
-
 <div class="container-fluid">
   <div class="row dashboard-row">
     <nav
@@ -131,7 +93,10 @@
         </div>
 
       <hr class="my-4" />
-      <h2 class="mb-3">My Recent Notes</h2>
+      <h2 class="mb-3">My Notes</h2>
+      
+      {% include 'core/components/dashboard/_dashboard_filters.html' %}
+
       <div class="row">
         {% if notes_page_obj and notes_page_obj.object_list %}
           {% for note in notes_page_obj.object_list %}
@@ -139,76 +104,26 @@
           {% endfor %}
         {% else %}
           <div class="col-12">
-            <p class="text-muted">
-              You haven't created any notes yet. As you take notes in your
-              courses, they will appear here.
-            </p>
+            {% if current_filters.course_id or current_filters.video_id %}
+              <p class="text-muted">
+                No notes found matching your selected filters.
+              </p>
+            {% else %}
+              <p class="text-muted">
+                You haven't created any notes yet. As you take notes in your
+                courses, they will appear here.
+              </p>
+            {% endif %}
           </div>
         {% endif %}
       </div>
-      {% include 'core/components/dashboard/_pagination.html' with page_obj=notes_page_obj %}
+      {% include 'core/components/dashboard/_pagination.html' with page_obj=notes_page_obj current_filters=current_filters %}
 
     </main>
   </div>
 </div>
+{% endblock %}
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const courseLinks = document.querySelectorAll(".course-link");
-    const welcomeContainer = document.getElementById(
-      "welcome-message-container"
-    );
-    const roadmapContainer = document.getElementById("roadmap-container");
-
-    courseLinks.forEach((link) => {
-      link.addEventListener("click", async function (event) {
-        event.preventDefault();
-
-        courseLinks.forEach((l) => l.classList.remove("active"));
-        this.classList.add("active");
-
-        const courseId = this.getAttribute("data-course-id");
-
-        welcomeContainer.style.display = "none";
-        roadmapContainer.style.display = "block";
-        roadmapContainer.innerHTML = `
-            <div class="d-flex justify-content-center p-5">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-            `;
-
-        try {
-          const response = await fetch(`/roadmap/${courseId}/`);
-          if (!response.ok) {
-            throw new Error("Failed to load course data.");
-          }
-          const data = await response.json();
-
-          const firstVideoUrl = `/courses/${courseId}/`;
-          let roadmapHTML = `
-                <div classrow justify-content-center mb-4">
-                    <div class="col-lg-8">
-                        <div class="card shadow border-0 text-center">
-                            <div class="card-body p-5">
-                                <h2 class="display-5 fw-bold">Roadmap to ${data.title}</h2>
-                                <p class="lead text-muted mt-3">Your learning journey for this course is ready. Press the button below to begin.</p>
-                                <a href="${firstVideoUrl}" class="btn btn-custom-in btn-lg mt-4">Start Learning</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                `;
-
-          roadmapContainer.innerHTML = roadmapHTML;
-        } catch (error) {
-          console.error("Error fetching roadmap:", error);
-          roadmapContainer.innerHTML =
-            '<div class="alert alert-danger">Could not load the course roadmap. Please try again.</div>';
-        }
-      });
-    });
-  });
-</script>
+{% block extra_js %}
+  <script src="{% static 'js/dashboard.js' %}" defer></script>
 {% endblock %}

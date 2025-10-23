@@ -1,0 +1,49 @@
+<form method="GET" action="{% url 'dashboard' %}" class="mb-4 p-3 bg-light rounded shadow-sm">
+  <div class="row g-3 align-items-end">
+    
+    <div class="col-md-3">
+      <label for="sort_by" class="form-label fw-bold">Sort by</label>
+      <select name="sort_by" id="sort_by" class="form-select">
+        <option value="-created_at" {% if current_filters.sort_by == '-created_at' %}selected{% endif %}>
+          Newest First
+        </option>
+        <option value="created_at" {% if current_filters.sort_by == 'created_at' %}selected{% endif %}>
+          Oldest First
+        </option>
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label for="course_id" class="form-label fw-bold">Course</label>
+      <select name="course_id" id="course_id" class="form-select">
+        <option value="">All Courses</option>
+        {% for course in filter_courses %}
+          <option value="{{ course.id }}" {% if current_filters.course_id == course.id %}selected{% endif %}>
+            {{ course.title }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label for="video_id" class="form-label fw-bold">Video</label>
+      <select name="video_id" id="video_id" class="form-select">
+        <option value="">All Videos</option>
+        {% for video in filter_videos %}
+          <option value="{{ video.id }}" {% if current_filters.video_id == video.id %}selected{% endif %}>
+            {{ video.title|truncatechars:30 }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3 d-flex">
+      <button type="submit" class="btn btn-custom-in w-100 me-2">
+        <i class="fas fa-filter me-1"></i> Filter
+      </button>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary w-50">
+        Reset
+      </a>
+    </div>
+  </div>
+</form>
