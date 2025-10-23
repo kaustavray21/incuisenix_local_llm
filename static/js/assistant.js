@@ -7,8 +7,8 @@ import * as Api from "./modules/assistant-api.js";
 // Utils are used internally by other modules, no direct import needed here usually
 
 // --- Create and Populate the Global Namespace ---
-// Expose only the functions needed by assistant_history.js or potentially other scripts
-var InCuiseNixAssistant = window.InCuiseNixAssistant || {}; // Ensure it exists
+// Create a local object to hold the API
+const InCuiseNixAssistant = window.InCuiseNixAssistant || {};
 
 InCuiseNixAssistant.appendMessage = DomUtils.appendMessage;
 InCuiseNixAssistant.clearChatBox = DomUtils.clearChatBox;
@@ -30,6 +30,11 @@ InCuiseNixAssistant.resetChat = function () {
   // const timestamp = window.videoPlayer ? window.videoPlayer.currentTime : 0;
   // Api.submitQuery(null, timestamp, { forceNew: true });
 };
+
+// *** THIS IS THE FIX ***
+// Explicitly attach the populated object to the global window scope
+// so that other non-module scripts (like assistant_history.js) can find it.
+window.InCuiseNixAssistant = InCuiseNixAssistant;
 
 // --- Main Initialization ---
 document.addEventListener("DOMContentLoaded", function () {

@@ -118,6 +118,9 @@ export function toggleHistoryView(showHistory) {
     histView.style.display = "flex";
   } else {
     mainView.style.display = "flex";
+    // *** THIS IS THE FIX ***
+    // Add flex-direction to ensure vertical layout of chatbox and form
+    mainView.style.flexDirection = "column";
     histView.style.display = "none";
   }
 }
