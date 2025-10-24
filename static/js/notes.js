@@ -28,6 +28,10 @@ document.addEventListener("DOMContentLoaded", function () {
           ui.addNoteToUI(data.note_card_html);
           addNoteForm.reset();
           addNoteModal.hide();
+          
+          if (window.videoPlayer && typeof window.videoPlayer.playVideo === "function") {
+            window.videoPlayer.playVideo();
+          }
         } else {
           console.error("Failed to add note:", data.errors);
         }
@@ -115,6 +119,11 @@ document.addEventListener("DOMContentLoaded", function () {
         window.videoPlayer &&
         typeof window.videoPlayer.currentTime === "number"
       ) {
+        
+        if (typeof window.videoPlayer.pauseVideo === "function") {
+          window.videoPlayer.pauseVideo();
+        }
+        
         const currentTime = Math.round(window.videoPlayer.currentTime);
         document.getElementById("id_video_timestamp").value = currentTime;
       }
