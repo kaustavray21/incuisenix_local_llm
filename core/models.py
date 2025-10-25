@@ -12,7 +12,8 @@ class Course(models.Model):
 
 class Video(models.Model):
     id = models.AutoField(primary_key=True)
-    youtube_id = models.CharField(max_length=50, unique=True)
+    youtube_id = models.CharField(max_length=50, unique=False, blank=True, null=True) # <-- MODIFIED
+    vimeo_id = models.CharField(max_length=50, unique=False, blank=True, null=True)   # <-- ADDED
     title = models.CharField(max_length=200)
     video_url = models.URLField(max_length=200)
     course = models.ForeignKey(Course, related_name='videos', on_delete=models.CASCADE)
@@ -27,6 +28,7 @@ class Transcript(models.Model):
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='transcripts')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='transcripts')
     youtube_id = models.CharField(max_length=50, db_index=True, blank=True, null=True)
+    vimeo_id = models.CharField(max_length=50, db_index=True, blank=True, null=True) # <-- ADDED
 
     def __str__(self):
         return f'{self.video.title} - {self.start}'
@@ -81,4 +83,4 @@ class ConversationMessage(models.Model):
         ordering = ['timestamp']
 
     def __str__(self):
-        return f'Query in "{self.conversation.title}" at {self.timestamp}' 
+        return f'Query in "{self.conversation.title}" at {self.timestamp}'
