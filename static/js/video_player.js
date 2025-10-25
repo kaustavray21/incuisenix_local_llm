@@ -1,14 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const playerData = document.getElementById('player-data-container');
     const videoId = playerData.dataset.videoId;
-    let transcripts = []; // Store transcripts
-    let player; // Plyr instance
+    let transcripts = [];
+    let player;
 
-    /**
-     * Formats seconds into HH:MM:SS or MM:SS.
-     * @param {number} seconds - The time in seconds.
-     * @returns {string} - The formatted timestamp.
-     */
     function formatTimestamp(seconds) {
         const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
         const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -20,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${m}:${s}`;
     }
 
-    // Initialize Plyr
     if (document.getElementById('player')) {
         player = new Plyr('#player', {
             controls: [
@@ -35,10 +29,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 noCookie: true,
             }
         });
-        window.videoPlayer = player; // Expose player globally for assistant
+        window.videoPlayer = player;
     }
 
-    // Function to load and display transcript
     async function loadTranscript(videoId) {
         if (!videoId) return;
         
@@ -73,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="transcript-text">${line.content}</span>
                 `;
                 
-                // Add click event to seek video
                 lineElement.addEventListener('click', () => {
                     if (player) {
                         player.currentTime = line.start;
@@ -90,20 +82,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to highlight active transcript line
     function highlightTranscript(currentTime) {
         const transcriptContent = document.getElementById('transcript-content');
-        if (!transcriptContent) return;
+        if (!transcriptContent || !player) return;
 
         const lines = transcriptContent.querySelectorAll('.transcript-line');
         let activeLine = null;
+
+        const duration = player.duration; 
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const nextLine = lines[i + 1];
             
             const startTime = parseFloat(line.dataset.start);
-            const endTime = nextLine ? parseFloat(nextLine.dataset.start) : (player.duration || startTime + 5);
+            const endTime = nextLine ? parseFloat(nextLine.dataset.start) : (duration || startTime + 5); 
 
             if (currentTime >= startTime && currentTime < endTime) {
                 line.classList.add('active');
@@ -113,13 +106,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Scroll active line into view
         if (activeLine && !isElementInView(activeLine)) {
              activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
 
-    // Helper to check if element is in view
     function isElementInView(el) {
         const rect = el.getBoundingClientRect();
         const parentRect = el.parentElement.getBoundingClientRect();
@@ -129,10 +120,8 @@ document.addEventListener('DOMContentLoaded', function() {
         );
     }
 
-    // Load transcript on page load
     loadTranscript(videoId);
 
-    // Add timeupdate listener to player
     if (player) {
         player.on('timeupdate', () => {
             highlightTranscript(player.currentTime);

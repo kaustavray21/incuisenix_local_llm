@@ -49,3 +49,7 @@ tenacity==8.5.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
+
+keyring browser-cookie3
+PyVimeo
+curl_cffi brotli

@@ -16,7 +16,13 @@ class AssistantAPIView(APIView):
     def post(self, request, *args, **kwargs):
         query = request.data.get('query')
         youtube_video_id = request.data.get('video_id')
-        timestamp = float(request.data.get('timestamp', 0))
+        
+        timestamp_data = request.data.get('timestamp')
+        try:
+            timestamp = float(timestamp_data or 0.0)
+        except (TypeError, ValueError):
+            timestamp = 0.0
+        
         conversation_id = request.data.get('conversation_id')
         force_new = request.data.get('force_new', False)
 

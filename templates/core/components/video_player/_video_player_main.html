@@ -19,7 +19,9 @@
                 <div class="col-12">
                     <div class="video-section-wrapper shadow-sm rounded border p-3 mb-4">
                         <div class="plyr-container">
+                            
                             <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="{{ video.youtube_id }}"></div>
+                            
                         </div>
                         <div class="d-flex align-items-center justify-content-between mt-3">
                             <h4 class="mb-0" id="current-video-title">{{ video.title }}</h4>
@@ -35,7 +37,7 @@
                             
                             <button id="toggle-transcript-btn" class="btn btn-video-options" title="Show Transcript" data-bs-toggle="offcanvas" data-bs-target="#transcriptOffcanvas" aria-controls="transcriptOffcanvas">
                                 <i class="far fa-file-alt"></i> Transcript
-                             </button>
+                            </button>
                             <button class="btn btn-video-options" type="button" data-bs-toggle="offcanvas" data-bs-target="#assistantOffcanvas" aria-controls="assistantOffcanvas">
                                 <i class="fas fa-robot me-1"></i> AI Assistant
                             </button>

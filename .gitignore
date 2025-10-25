@@ -4,4 +4,4 @@ __pycache__/
 *.pyc
 downloads
 faiss_indexes
-
+local_videos

@@ -36,6 +36,7 @@ def parse_time(query: str, timestamp: float) -> float | None:
 
 def query_router(query: str, video_id: str, timestamp: float, chat_history: str, user_id: int):
     
+    # --- PRIORITY 1: SUMMARIZATION ---
     summarization_keywords = ['summarize', 'summary', 'overview', 'tldr', 'key points']
     if any(keyword in query.lower() for keyword in summarization_keywords):
         logger.info("Routing to: Summarizer Chain")
@@ -48,10 +49,12 @@ def query_router(query: str, video_id: str, timestamp: float, chat_history: str,
         summarizer_chain = get_summarizer_chain()
         return summarizer_chain.invoke({"context": full_transcript, "question": query})
 
+    # --- PRIORITY 2: TIME-BASED QUERY ---
     parsed_seconds = parse_time(query, timestamp)
     if parsed_seconds is not None:
         logger.info(f"Routing to: Time-Based Chain (Time: {parsed_seconds}s)")
         try:
+            # Find the transcript segment that started just before the parsed time
             transcript_segment = Transcript.objects.filter(
                 video__youtube_id=video_id,
                 start__lte=parsed_seconds
@@ -63,39 +66,41 @@ def query_router(query: str, video_id: str, timestamp: float, chat_history: str,
         except Transcript.DoesNotExist:
             return "I couldn't find any transcript information for that specific time."
 
+    # --- PRIORITY 3: CLASSIFIER ROUTING ---
     logger.info("Routing to: Query Type Classifier")
     classifier_chain = get_query_type_classifier_chain()
     classification = classifier_chain.invoke({"question": query})
-    logger.info(f"Classification: {classification}")
+    logger.info(f"Classification: {classification.strip()}") # strip ensures clean logging
 
     if "Fetch_Notes" in classification:
         logger.info("Routing to: Fetch Notes (Direct DB Query)")
-        try:
-            video = get_object_or_404(Video, youtube_id=video_id)
-            notes = Note.objects.filter(user__id=user_id, video=video).order_by('video_timestamp')
+        
+        # --- IMPROVED NOTES FETCH LOGIC ---
+        notes = Note.objects.filter(
+            user__id=user_id, 
+            video__youtube_id=video_id
+        ).order_by('video_timestamp')
+        
+        if not notes.exists():
+            return "You haven't created any notes for this video yet."
+        
+        response_message = "Here are your notes for this video:\n\n"
+        for note in notes:
+            minutes = int(note.video_timestamp // 60)
+            seconds = int(note.video_timestamp % 60)
+            formatted_time = f"{minutes}:{seconds:02d}"
             
-            if not notes.exists():
-                return "You haven't created any notes for this video yet."
-            
-            response_message = "Here are your notes for this video:\n\n"
-            for note in notes:
-                minutes = int(note.video_timestamp // 60)
-                seconds = int(note.video_timestamp % 60)
-                formatted_time = f"{minutes}:{seconds:02d}"
-                
-                response_message += f"* **(at {formatted_time}) - {note.title}**\n"
-                response_message += f"    * {note.content}\n"
-            
-            return response_message
-        except Exception as e:
-            logger.error(f"Error fetching notes from DB: {e}", exc_info=True)
-            return "Sorry, I had trouble retrieving your notes from the database."
-
+            response_message += f"* **(at {formatted_time}) - {note.title}**\n"
+            response_message += f"    * {note.content}\n"
+        
+        return response_message
+        # --- END IMPROVED NOTES FETCH LOGIC ---
 
     if "General" in classification:
         logger.info("Routing to: General Chain")
         return get_general_chain().invoke({"question": query})
 
+    # --- DEFAULT ROUTING: RAG ---
     logger.info("Routing to: Standard RAG Chain")
     rag_chain = get_rag_chain(video_id, user_id=user_id)
     return rag_chain.invoke({

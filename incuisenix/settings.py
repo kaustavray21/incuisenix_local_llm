@@ -31,6 +31,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 SECRET_KEY = 'django-insecure-+yaj8muf0tj-qod6spxh%a)vx+bkx%#6$gk8tap%@zr&yi&pg9'
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+VIMEO_API_KEY = os.getenv('VIMEO_API_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -145,4 +146,4 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 LOGIN_URL = 'home'
 
-FAISS_INDEX_ROOT = os.path.join(BASE_DIR, 'faiss_indexes')
+FAISS_INDEX_ROOT = os.path.join(BASE_DIR, 'faiss_indexes/')

@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import logging # <-- Add this
+import logging
 from django.conf import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import DataFrameLoader
@@ -9,7 +9,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.retrievers import EnsembleRetriever
 from core.models import Transcript
 
-logger = logging.getLogger(__name__) # <-- Add this
+logger = logging.getLogger(__name__)
 
 EMBEDDING_MODEL = "models/text-embedding-004"
 
@@ -20,8 +20,9 @@ def get_embeddings():
     )
 
 def get_transcript_vector_store(video_id: str):
-    # --- FIXED: Look in 'transcripts' subfolder ---
+    # --- FIX: Enforce fetching from the 'transcripts' subfolder ---
     index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts', video_id)
+    
     if not os.path.exists(index_path):
         logger.warning(f"No transcript index found for video {video_id} at {index_path}")
         return None
@@ -36,9 +37,8 @@ def get_transcript_vector_store(video_id: str):
         logger.error(f"Error loading transcript index for video {video_id}: {e}")
         return None
 
-# --- FIXED: Function now requires user_id ---
 def get_note_vector_store(video_id: str, user_id: int):
-    # --- FIXED: Path now includes user_id to match our writer ---
+    # Path for user-specific note indexes
     index_path = os.path.join(
         settings.FAISS_INDEX_ROOT, 
         'notes', 
@@ -61,7 +61,6 @@ def get_note_vector_store(video_id: str, user_id: int):
 
 def get_retriever(video_id: str, user_id: int):
     transcript_store = get_transcript_vector_store(video_id)
-    # --- FIXED: Pass user_id to the getter ---
     note_store = get_note_vector_store(video_id, user_id)
 
     retrievers = []
@@ -78,7 +77,6 @@ def get_retriever(video_id: str, user_id: int):
         note_retriever = note_store.as_retriever(
             search_type="similarity",
             search_kwargs={
-                # This is what we will fix in the *next* step
                 "k": 20, 
                 "filter": {"user_id": user_id}
             }
@@ -125,7 +123,7 @@ def create_vector_store_for_video(video_id: str):
     logger.info(f"Creating FAISS index from {len(docs)} document chunks for video {video_id}...")
     vector_store = FAISS.from_documents(docs, embedding_function)
 
-    # --- FIXED: Save to a 'transcripts' subfolder ---
+    # --- FIX: Save to the 'transcripts' subfolder ---
     index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts', video_id)
     os.makedirs(index_path, exist_ok=True)
 
