@@ -1,6 +1,6 @@
 <div class="offcanvas offcanvas-end" tabindex="-1" id="assistantOffcanvas" 
      aria-labelledby="assistantOffcanvasLabel"
-     data-video-id="{{ video.youtube_id }}">
+     data-video-id="{{video.youtube_id|default:video.vimeo_id}}">
 
   <div class="offcanvas-header assistant-header">
     

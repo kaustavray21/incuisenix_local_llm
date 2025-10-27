@@ -30,7 +30,7 @@ urlpatterns = [
     path('api/assistant/', api_assistant.AssistantAPIView.as_view(), name='assistant_api'),
 
     # Transcript API URL
-    path('api/transcripts/<int:video_id>/', api_transcript.get_transcript_view, name='api_get_transcripts'),
+    path('api/transcripts/<str:video_id>/', api_transcript.get_transcript_view, name='api_get_transcripts'),
 
     # --- NEW: Conversation History API URLs ---
     path('api/conversations/', api_conversation.get_conversation_list, name='get_conversation_list'),

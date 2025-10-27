@@ -1,6 +1,5 @@
 <div class="container-fluid mt-4 pb-5" id="player-data-container"
-     data-video-id="{% if video %}{{ video.id }}{% endif %}"
-     data-csrf-token="{{ csrf_token }}">
+     data-video-id="{% if video %}{{ video.youtube_id|default:video.vimeo_id }}{% endif %}" data-csrf-token="{{ csrf_token }}">
 
     <div class="row">
         <div class="col-lg-3">
@@ -19,10 +18,15 @@
                 <div class="col-12">
                     <div class="video-section-wrapper shadow-sm rounded border p-3 mb-4">
                         <div class="plyr-container">
-                            
-                            <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="{{ video.youtube_id }}"></div>
-                            
-                        </div>
+
+                            {% if video.youtube_id %}
+                                <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="{{ video.youtube_id }}"></div>
+                            {% elif video.vimeo_id %}
+                                <div id="player" data-plyr-provider="vimeo" data-plyr-embed-id="{{ video.vimeo_id }}"></div>
+                            {% else %}
+                                <div class="alert alert-danger">Error: Video provider or ID is missing.</div>
+                            {% endif %}
+                            </div>
                         <div class="d-flex align-items-center justify-content-between mt-3">
                             <h4 class="mb-0" id="current-video-title">{{ video.title }}</h4>
                         </div>
@@ -34,7 +38,7 @@
                             <button type="button" class="btn btn-video-options" data-bs-toggle="offcanvas" data-bs-target="#notesOffcanvas">
                                 <i class="fas fa-list-ul"></i> View Notes
                             </button>
-                            
+
                             <button id="toggle-transcript-btn" class="btn btn-video-options" title="Show Transcript" data-bs-toggle="offcanvas" data-bs-target="#transcriptOffcanvas" aria-controls="transcriptOffcanvas">
                                 <i class="far fa-file-alt"></i> Transcript
                             </button>
@@ -48,8 +52,8 @@
 
             <div class="row mt-2">
                 <div class="col-12">
-                  {% include 'core/components/video_player/_transcript_viewer.html' %}
-                  {% include 'core/components/video_player/_assistant_chat.html' %}
+                    {% include 'core/components/video_player/_transcript_viewer.html' %}
+                    {% include 'core/components/video_player/_assistant_chat.html' %}
                 </div>
             </div>
             {% else %}
