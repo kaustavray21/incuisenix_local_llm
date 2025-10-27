@@ -29,9 +29,8 @@ document.addEventListener("DOMContentLoaded", function () {
           addNoteForm.reset();
           addNoteModal.hide();
           
-          if (window.videoPlayer && typeof window.videoPlayer.playVideo === "function") {
-            window.videoPlayer.playVideo();
-          }
+          // --- CHANGE 1: REMOVED playVideo() call from here ---
+
         } else {
           console.error("Failed to add note:", data.errors);
         }
@@ -120,12 +119,37 @@ document.addEventListener("DOMContentLoaded", function () {
         typeof window.videoPlayer.currentTime === "number"
       ) {
         
-        if (typeof window.videoPlayer.pauseVideo === "function") {
-          window.videoPlayer.pauseVideo();
+        // --- CHANGE 2: Use standard .pause() ---
+        if (typeof window.videoPlayer.pause === "function") {
+          window.videoPlayer.pause();
         }
         
         const currentTime = Math.round(window.videoPlayer.currentTime);
         document.getElementById("id_video_timestamp").value = currentTime;
+      }
+    });
+
+    // --- CHANGE 3: ADDED listener to resume on hide ---
+    addNoteModalEl.addEventListener("hide.bs.modal", function () {
+      if (window.videoPlayer && typeof window.videoPlayer.play === "function") {
+        window.videoPlayer.play();
+      }
+    });
+  }
+
+  // --- CHANGE 4: ADDED listeners for Edit Note Modal ---
+  if (editNoteModalEl) {
+    // Pause video when edit modal is shown
+    editNoteModalEl.addEventListener("show.bs.modal", function () {
+      if (window.videoPlayer && typeof window.videoPlayer.pause === "function") {
+        window.videoPlayer.pause();
+      }
+    });
+
+    // Resume video when edit modal is hidden
+    editNoteModalEl.addEventListener("hide.bs.modal", function () {
+      if (window.videoPlayer && typeof window.videoPlayer.play === "function") {
+        window.videoPlayer.play();
       }
     });
   }
