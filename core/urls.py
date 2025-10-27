@@ -22,7 +22,7 @@ urlpatterns = [
     path('api/enroll/<int:course_id>/', api_course.enroll_view, name='enroll'),
     
     # Note API URLs
-    path('api/notes/add/<int:video_id>/', api_note.add_note_view, name='add_note'),
+    path('api/notes/add/<str:video_id>/', api_note.add_note_view, name='add_note'),
     path('api/notes/edit/<int:note_id>/', api_note.edit_note_view, name='edit_note'),
     path('api/notes/delete/<int:note_id>/', api_note.delete_note_view, name='delete_note'),
     

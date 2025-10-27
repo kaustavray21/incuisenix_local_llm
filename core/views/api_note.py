@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
+from django.db.models import Q
 
 from ..forms import NoteForm
 from ..models import Note, Video
@@ -16,8 +17,12 @@ logger = logging.getLogger(__name__)
 @login_required
 @require_POST
 def add_note_view(request, video_id):
-    # Use the DB ID to fetch the video for adding notes
-    video = get_object_or_404(Video, id=video_id)
+    # Use the string video_id (YT or Vimeo) to fetch the video
+    video = get_object_or_404(
+        Video,
+        Q(youtube_id=video_id) | Q(vimeo_id=video_id)
+    )
+    
     form = NoteForm(request.POST)
     if form.is_valid():
         note = form.save(commit=False)
