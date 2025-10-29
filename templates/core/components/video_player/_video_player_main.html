@@ -1,5 +1,9 @@
 <div class="container-fluid mt-4 pb-5" id="player-data-container"
-     data-video-id="{% if video %}{{ video.youtube_id|default:video.vimeo_id }}{% endif %}" data-csrf-token="{{ csrf_token }}">
+     data-video-id="{% if video %}{{ video.id }}{% endif %}"
+     data-video-provider="{% if video_provider %}{{ video_provider }}{% endif %}"
+     data-vimeo-id="{% if video.vimeo_id %}{{ video.vimeo_id }}{% endif %}"
+     data-youtube-id="{% if video.youtube_id %}{{ video.youtube_id }}{% endif %}"
+     data-csrf-token="{{ csrf_token }}">
 
     <div class="row">
         <div class="col-lg-3">
@@ -19,14 +23,22 @@
                     <div class="video-section-wrapper shadow-sm rounded border p-3 mb-4">
                         <div class="plyr-container">
 
-                            {% if video.youtube_id %}
+                            {% if video_provider == 'youtube' %}
                                 <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="{{ video.youtube_id }}"></div>
-                            {% elif video.vimeo_id %}
-                                <div id="player" data-plyr-provider="vimeo" data-plyr-embed-id="{{ video.vimeo_id }}"></div>
+                            
+                            {% elif video_provider == 'vimeo' %}
+                                <video id="player" playsinline controls></video>
+                            
+                            {% elif error_message %}
+                                <div class="alert alert-danger" role="alert">
+                                    {{ error_message }}
+                                </div>
+                            
                             {% else %}
-                                <div class="alert alert-danger">Error: Video provider or ID is missing.</div>
+                                <div class="alert alert-danger">Error: Video could not be loaded. Provider or ID is missing.</div>
                             {% endif %}
-                            </div>
+                            
+                        </div>
                         <div class="d-flex align-items-center justify-content-between mt-3">
                             <h4 class="mb-0" id="current-video-title">{{ video.title }}</h4>
                         </div>
@@ -58,7 +70,11 @@
             </div>
             {% else %}
             <div class="alert alert-info">
-                <p class="mb-0">Please select a video from the playlist to begin.</p>
+                {% if error_message %}
+                    <p class="mb-0">{{ error_message }}</p>
+                {% else %}
+                    <p class="mb-0">Please select a video from the playlist to begin.</p>
+                {% endif %}
             </div>
             {% endif %}
         </div>

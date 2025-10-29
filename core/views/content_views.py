@@ -1,74 +1,56 @@
-# core/views/content_views.py
-
+import requests
+import logging
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from ..models import Enrollment, Course, Video, Note # Use relative imports
-from ..forms import NoteForm # Use relative imports
+from django.http import JsonResponse
+from ..models import Enrollment, Course, Video, Note
+from ..forms import NoteForm
+from django.core.cache import cache
 
 def home(request):
     return render(request, 'core/home.html')
-
-def about_view(request):
-    # Assuming you have a template for this view
-    # If not, you can create 'core/about.html'
-    return render(request, 'core/about.html')
 
 @login_required
 def dashboard_view(request):
     user = request.user
     
-    # --- Filter Logic ---
-    
-    # Get filter parameters from the GET request
-    sort_by = request.GET.get('sort_by', '-created_at') # Default to newest
+    sort_by = request.GET.get('sort_by', '-created_at')
     course_id = request.GET.get('course_id')
     video_id = request.GET.get('video_id')
 
-    # Start with all notes for the user
     notes_query = Note.objects.filter(user=user).select_related('video', 'course')
 
-    # Apply filters if they exist
     if course_id:
         notes_query = notes_query.filter(course_id=course_id)
     if video_id:
         notes_query = notes_query.filter(video_id=video_id)
 
-    # Apply sorting
-    if sort_by in ['-created_at', 'created_at']: # Whitelist sort options
+    if sort_by in ['-created_at', 'created_at']:
         notes_query = notes_query.order_by(sort_by)
     else:
-        notes_query = notes_query.order_by('-created_at') # Default fallback
+        notes_query = notes_query.order_by('-created_at')
         
-    # --- Data for Dropdowns ---
-    
-    # Get all enrolled courses (for the sidebar)
     enrolled_courses = Enrollment.objects.filter(user=user).select_related('course')
     
-    # Get only courses where the user has at least one note
     courses_with_notes = Course.objects.filter(
         id__in=Note.objects.filter(user=user).values_list('course_id', flat=True).distinct()
     ).order_by('title')
     
-    # Get only videos where the user has at least one note
     videos_with_notes = Video.objects.filter(
         id__in=Note.objects.filter(user=user).values_list('video_id', flat=True).distinct()
     ).order_by('title')
     
-    # --- Pagination ---
-    paginator = Paginator(notes_query, 6) # Paginate the *filtered* notes
+    paginator = Paginator(notes_query, 6)
     page_number = request.GET.get('page')
     notes_page_obj = paginator.get_page(page_number)
 
     context = {
         'enrolled_courses': [enrollment.course for enrollment in enrolled_courses],
         'notes_page_obj': notes_page_obj,
-        
-        # Pass filter options to the template
         'filter_courses': courses_with_notes,
         'filter_videos': videos_with_notes,
-        
-        # Pass selected values back to the template
         'current_filters': {
             'sort_by': sort_by,
             'course_id': int(course_id) if course_id else None,
@@ -87,6 +69,7 @@ def courses_list_view(request):
     }
     return render(request, 'core/courses_list.html', context)
 
+
 @login_required
 def video_player_view(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -103,6 +86,18 @@ def video_player_view(request, course_id):
     elif all_videos.exists():
         video_obj = all_videos.first()
 
+    video_provider = None
+    error_message = None
+
+    if video_obj and video_obj.vimeo_id:
+        video_provider = 'vimeo'
+    elif video_obj and video_obj.youtube_id:
+        video_provider = 'youtube'
+    elif video_obj:
+        error_message = "This video object does not have a valid Vimeo or YouTube ID."
+    else:
+        error_message = "No video selected or available in this course."
+
     notes = Note.objects.filter(user=request.user, video=video_obj) if video_obj else []
     form = NoteForm()
 
@@ -112,8 +107,76 @@ def video_player_view(request, course_id):
         'video': video_obj,
         'notes': notes,
         'form': form,
+        'video_links': [],
+        'error_message': error_message,
+        'video_provider': video_provider,
     }
     return render(request, 'core/video_player.html', context)
+
+
+@login_required
+def get_vimeo_links_api(request, video_id):
+    video = get_object_or_404(Video, id=video_id, vimeo_id__isnull=False)
+    
+    if not Enrollment.objects.filter(user=request.user, course=video.course).exists():
+        return JsonResponse({'error': 'Not enrolled'}, status=403)
+
+    cache_key = f"vimeo_links_{video.vimeo_id}"
+    cached_links = cache.get(cache_key)
+
+    if cached_links:
+        return JsonResponse({'links': cached_links})
+
+    video_links = []
+    
+    try:
+        api_key = settings.VIMEO_API_KEY
+        if not api_key:
+            raise ValueError("VIMEO_API_KEY is not set in project settings.")
+            
+        api_url = f"https://api.vimeo.com/videos/{video.vimeo_id}"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/vnd.vimeo.*+json;version=3.4"
+        }
+        
+        response = requests.get(api_url, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        for file_info in data.get('files', []):
+            if file_info.get('quality') in ('hd', 'sd') and file_info.get('type') == 'video/mp4':
+                video_links.append({
+                    'url': file_info.get('link'),
+                    'quality': file_info.get('height'),
+                })
+        
+        video_links.sort(key=lambda x: x.get('quality', 0), reverse=True)
+
+        if not video_links and data.get('files'):
+            first_file = data['files'][0]
+            video_links.append({
+                    'url': first_file.get('link'),
+                    'quality': first_file.get('height') or 'auto',
+            })
+
+        if not video_links:
+            return JsonResponse({'error': 'No compatible video files were found.'}, status=404)
+
+        cache.set(cache_key, video_links, timeout=7200)
+
+        return JsonResponse({'links': video_links})
+
+    except requests.exceptions.HTTPError as http_err:
+        logging.error(f"Vimeo API HTTPError for video {video.vimeo_id}: {http_err}")
+        return JsonResponse({'error': f'Vimeo API Error: {http_err.response.status_code}'}, status=502)
+    except requests.exceptions.RequestException as req_err:
+        logging.error(f"Vimeo API RequestException for video {video.vimeo_id}: {req_err}")
+        return JsonResponse({'error': 'Network Error: Could not connect to Vimeo.'}, status=504)
+    except Exception as e:
+        logging.error(f"Unexpected error fetching Vimeo video {video.vimeo_id}: {e}")
+        return JsonResponse({'error': 'An unexpected server error occurred.'}, status=500)
 
 def custom_404_view(request, exception=None):
     return render(request, 'core/404.html', {}, status=404)

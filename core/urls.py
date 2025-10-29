@@ -38,5 +38,10 @@ urlpatterns = [
     
     # --- THIS LINE WAS MISSING, I'VE ADDED IT BACK ---
     path('api/conversations/delete/<int:conversation_id>/', api_conversation.delete_conversation, name='delete_conversation'),
+    #Vimeo Links APi
+    path('api/get-vimeo-links/<int:video_id>/', content_views.get_vimeo_links_api, name='api_get_vimeo_links'),
+    
+    # --- API ENDPOINT FOR ADDING COURSE
+    path('api/courses/add/', api_course.create_course_view, name='add_course'),
 ]
 handler404 = 'core.views.content_views.custom_404_view'
