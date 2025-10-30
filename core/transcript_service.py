@@ -1,5 +1,3 @@
-# core/transcript_service.py
-
 import os
 import re
 import csv
@@ -9,12 +7,10 @@ import vimeo
 import pandas as pd
 import logging
 from django.conf import settings
-from .models import Video, Transcript # <-- ADDED Transcript
+from .models import Video, Transcript
 from youtube_transcript_api import YouTubeTranscriptApi
 
 logger = logging.getLogger(__name__)
-
-# --- Helper Functions (Refactored from command) ---
 
 def sanitize_filename(title):
     return re.sub(r'[\\/*?:"<>|]', "", title)
@@ -55,40 +51,71 @@ def _download_audio(video, log_list):
         'quiet': True,
     }
 
-    if video.vimeo_id and os.getenv('VIMEO_TOKEN'):
-         ydl_opts['http_headers'] = {'Authorization': f'bearer {os.getenv("VIMEO_TOKEN")}'}
+    download_url = video.video_url
+    log_list.append(f'  -> Using video_url from database: {download_url}')
+    
+    if video.vimeo_id:
+        vimeo_username = os.getenv('VIMEO_USERNAME')
+        vimeo_password = os.getenv('VIMEO_PASSWORD')
+        
+        if vimeo_username and vimeo_password:
+            log_list.append('  -> VIMEO_USERNAME and VIMEO_PASSWORD found.')
+            ydl_opts['username'] = vimeo_username
+            ydl_opts['password'] = vimeo_password
+        else:
+            log_list.append('  -> WARNING: VIMEO_USERNAME or VIMEO_PASSWORD not set in .env.')
+            
+        headers = {'Referer': 'https://vimeo.com/'}
+        log_list.append(f'  -> Adding base Referer header: https://vimeo.com/')
+        ydl_opts['http_headers'] = headers
+    
+    elif video.youtube_id:
+        log_list.append(f'  -> This is a YouTube video.')
+    
+    if not download_url:
+         log_list.append('  -> ERROR: video_url is empty.')
+         return None
 
     try:
+        log_list.append('  -> Initializing yt_dlp...')
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video.video_url])
+            log_list.append(f'  -> Calling ydl.download()...')
+            ydl.download([download_url])
+            
             if os.path.exists(final_filepath):
                 log_list.append(f'  -> SUCCESS: Audio downloaded: {os.path.basename(final_filepath)}')
                 return final_filepath
             else:
-                log_list.append('  -> ERROR: Downloaded audio file not found at expected path.')
+                log_list.append('  -> ERROR: ydl.download() completed but file not found at expected path.')
                 return None
+    except yt_dlp.utils.DownloadError as de:
+        log_list.append(f'  -> ERROR: yt_dlp DownloadError: {de}')
+        return None
     except Exception as e:
-        log_list.append(f'  -> ERROR: Error downloading audio: {e}')
+        log_list.append(f'  -> ERROR: General error downloading audio: {e}')
         return None
 
 def _transcribe_with_whisper(audio_path, model, log_list):
     log_list.append(f'  -> Transcribing "{os.path.basename(audio_path)}" with Whisper...')
     try:
+        log_list.append(f'  -> Calling model.transcribe()... (This may take a while)')
         result = model.transcribe(audio_path, fp16=False) 
-        log_list.append('  -> SUCCESS: Whisper transcription successful.')
-        return result.get('segments', [])
+        log_list.append('  -> model.transcribe() finished.')
+        
+        segments = result.get('segments', [])
+        num_segments = len(segments)
+
+        if num_segments > 0:
+            log_list.append(f'  -> SUCCESS: Whisper transcription successful. Found {num_segments} segments.')
+        else:
+            log_list.append('  -> WARNING: Whisper transcription complete but found 0 segments.')
+            
+        return segments
     except Exception as e:
         log_list.append(f'  -> ERROR: Error during Whisper transcription: {e}')
         return None
 
-# --- Main Public Function ---
-
 def generate_transcript_for_video(video: Video, force_generation: bool = False):
-    """
-    Generates a transcript CSV for a single video.
-    Saves to CSV AND populates the database Transcript model.
-    Returns a tuple: (status_message, log_list)
-    """
     log_list = []
     
     platform = "Unknown"
@@ -114,10 +141,9 @@ def generate_transcript_for_video(video: Video, force_generation: bool = False):
         return "Skipped (exists)", log_list
 
     log_list.append(f'--- Processing video: "{video.title}" ({platform}) ---')
-    transcript_data = None # This will be a list of dicts
+    transcript_data = None
     use_whisper = False
 
-    # --- Load Whisper Model ---
     try:
         whisper_model = whisper.load_model("base")
         log_list.append("Whisper model loaded successfully.")
@@ -125,7 +151,6 @@ def generate_transcript_for_video(video: Video, force_generation: bool = False):
         log_list.append(f"ERROR: Failed to load Whisper model: {e}")
         return "Error", log_list
 
-    # --- Attempt Faster Transcript Methods ---
     try:
         if platform == "YouTube":
             log_list.append('  -> Trying YouTube Transcript API...')
@@ -155,7 +180,6 @@ def generate_transcript_for_video(video: Video, force_generation: bool = False):
         log_list.append(f'  -> API method failed ({e_api}). Using Whisper fallback.')
         use_whisper = True
 
-    # --- Whisper Fallback ---
     if use_whisper:
         audio_path = _download_audio(video, log_list)
         if audio_path:
@@ -172,9 +196,7 @@ def generate_transcript_for_video(video: Video, force_generation: bool = False):
             log_list.append('  -> ERROR: Skipping CSV save due to download failure.')
             transcript_data = None
 
-    # --- Save Transcript to CSV and Database ---
     if transcript_data:
-        # --- 1. Save to CSV File ---
         try:
             df = pd.DataFrame(transcript_data)
             df = df[['start', 'content']] 
@@ -182,16 +204,13 @@ def generate_transcript_for_video(video: Video, force_generation: bool = False):
             log_list.append(f'  -> SUCCESS: Successfully saved transcript CSV: {transcript_path}')
         except Exception as e:
             log_list.append(f'  -> ERROR: Failed to save CSV file: {e}')
-            return "Error", log_list # Return early if CSV fails
+            return "Error", log_list
 
-        # --- 2. Save to Database (NEW LOGIC) ---
         try:
             log_list.append('  -> Populating database...')
-            # Delete old entries for this video
             Transcript.objects.filter(video=video).delete()
             log_list.append('  -> Old database entries cleared.')
 
-            # Create new entries
             transcripts_to_create = [
                 Transcript(
                     video=video,
@@ -214,3 +233,4 @@ def generate_transcript_for_video(video: Video, force_generation: bool = False):
     else:
          log_list.append('  -> ERROR: No transcript data was generated to save.')
          return "Error", log_list
+

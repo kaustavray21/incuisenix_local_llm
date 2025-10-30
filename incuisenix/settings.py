@@ -28,11 +28,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+yaj8muf0tj-qod6spxh%a)vx+bkx%#6$gk8tap%@zr&yi&pg9'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-VIMEO_API_KEY = os.getenv('VIMEO_API_KEY')
-
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -131,7 +129,7 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Kolkata'
 
-USE_I18N = True
+USE_I1N = True
 
 USE_TZ = True
 

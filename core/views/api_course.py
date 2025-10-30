@@ -1,3 +1,6 @@
+import os
+import shutil
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -7,9 +10,9 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 
-from ..models import Course, Enrollment, Video # <-- ADDED Video
+from ..models import Course, Enrollment, Video
 from ..serializers import CourseSerializer
-from ..transcript_service import generate_transcript_for_video # <-- ADDED THIS
+from ..transcript_service import generate_transcript_for_video, sanitize_filename
 
 
 @api_view(['POST'])
@@ -25,8 +28,17 @@ def create_course_view(request):
 def delete_course_view(request, course_id):
     try:
         course = get_object_or_404(Course, id=course_id)
+        
+        course_dir_safe = sanitize_filename(course.title)
+        transcript_dir_path = os.path.join(settings.MEDIA_ROOT, 'transcripts', course_dir_safe)
+
+        if os.path.isdir(transcript_dir_path):
+            shutil.rmtree(transcript_dir_path)
+            
         course.delete()
+        
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -51,15 +63,8 @@ def roadmap_view(request, course_id):
     return JsonResponse(course_data)
 
 
-# --- NEW LOGIC ADDED BELOW ---
-
 @api_view(['POST'])
 def generate_course_transcripts_view(request, course_id):
-    """
-    Triggers transcript generation for ALL videos in a course.
-    WARNING: THIS WILL TIME OUT on any real course.
-    Use the management command for batch jobs.
-    """
     try:
         course = get_object_or_404(Course, id=course_id)
     except Course.DoesNotExist:
@@ -80,3 +85,4 @@ def generate_course_transcripts_view(request, course_id):
         }
 
     return Response({'status': 'Completed', 'results': all_logs}, status=status.HTTP_200_OK)
+

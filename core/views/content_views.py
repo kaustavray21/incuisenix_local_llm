@@ -1,4 +1,5 @@
 import requests
+import os
 import logging
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
@@ -130,9 +131,10 @@ def get_vimeo_links_api(request, video_id):
     video_links = []
     
     try:
-        api_key = settings.VIMEO_API_KEY
+        api_key = os.getenv('VIMEO_TOKEN')
+        
         if not api_key:
-            raise ValueError("VIMEO_API_KEY is not set in project settings.")
+            raise ValueError("VIMEO_TOKEN is not set in environment variables.")
             
         api_url = f"https://api.vimeo.com/videos/{video.vimeo_id}"
         headers = {
