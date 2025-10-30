@@ -5,7 +5,15 @@ class VideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
         fields = ['title', 'video_url', 'youtube_id', 'vimeo_id']
-        
+
+    def validate(self, data):
+        """
+        Check that at least one of youtube_id or vimeo_id is provided.
+        """
+        if not data.get('youtube_id') and not data.get('vimeo_id'):
+            raise serializers.ValidationError("A video must have either a youtube_id or a vimeo_id.")
+        return data
+
 class CourseSerializer(serializers.ModelSerializer):
     videos = VideoSerializer(many=True, write_only=True)
 

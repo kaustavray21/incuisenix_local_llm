@@ -5,3 +5,4 @@ __pycache__/
 downloads
 faiss_indexes
 local_videos
+django_cache

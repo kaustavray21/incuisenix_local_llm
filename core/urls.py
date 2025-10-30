@@ -31,6 +31,9 @@ urlpatterns = [
 
     # Transcript API URL
     path('api/transcripts/<str:video_id>/', api_transcript.get_transcript_view, name='api_get_transcripts'),
+    
+    # --- NEW: API ENDPOINT FOR GENERATING TRANSCRIPT (by video_id) ---
+    path('api/transcripts/generate/<int:video_id>/', api_transcript.generate_transcript_view, name='api_generate_transcript'),
 
     # --- NEW: Conversation History API URLs ---
     path('api/conversations/', api_conversation.get_conversation_list, name='get_conversation_list'),
@@ -41,7 +44,14 @@ urlpatterns = [
     #Vimeo Links APi
     path('api/get-vimeo-links/<int:video_id>/', content_views.get_vimeo_links_api, name='api_get_vimeo_links'),
     
+    
     # --- API ENDPOINT FOR ADDING COURSE
     path('api/courses/add/', api_course.create_course_view, name='add_course'),
+    
+    # --- API ENDPOINT FOR DELETING COURSE ---
+    path('api/courses/delete/<int:course_id>/', api_course.delete_course_view, name='delete_course'),
+    
+    # --- NEW: API ENDPOINT FOR GENERATING COURSE TRANSCRIPTS (by course_id) ---
+    path('api/courses/<int:course_id>/generate_transcripts/', api_course.generate_course_transcripts_view, name='generate_course_transcripts'),
 ]
-handler404 = 'core.views.content_views.custom_404_view'
+handler4_04 = 'core.views.content_views.custom_404_view'
