@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -13,6 +14,9 @@ from rest_framework import status
 from ..models import Course, Enrollment, Video
 from ..serializers import CourseSerializer
 from ..transcript_service import generate_transcript_for_video, sanitize_filename
+from ..rag.vector_store import create_vector_store_for_video
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
@@ -86,3 +90,47 @@ def generate_course_transcripts_view(request, course_id):
 
     return Response({'status': 'Completed', 'results': all_logs}, status=status.HTTP_200_OK)
 
+
+@api_view(['POST'])
+def generate_course_indexes_view(request, course_id):
+    try:
+        course = get_object_or_404(Course, id=course_id)
+    except Course.DoesNotExist:
+        return Response({'status': 'Error', 'log': ['Course not found']}, status=status.HTTP_404_NOT_FOUND)
+
+    videos = Video.objects.filter(course=course)
+    if not videos.exists():
+        return Response({'status': 'Skipped', 'log': ['No videos found for this course']}, status=status.HTTP_200_OK)
+
+    force_creation = request.data.get('force', False)
+    all_logs = {}
+
+    for video in videos:
+        video_id_to_use = video.youtube_id or video.vimeo_id
+        if not video_id_to_use:
+            log_msg = f"Video '{video.title}' (DB ID: {video.id}) has no platform ID. Skipping."
+            logger.warning(log_msg)
+            all_logs[f"Video ID {video.id}"] = {'status': 'Skipped', 'log': log_msg}
+            continue
+
+        try:
+            index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts', video_id_to_use)
+            faiss_file_path = os.path.join(index_path, "index.faiss")
+
+            if os.path.exists(faiss_file_path) and not force_creation:
+                log_msg = f"Index for '{video.title}' already exists. Skipping."
+                logger.info(log_msg)
+                all_logs[video_id_to_use] = {'status': 'Skipped', 'log': log_msg}
+                continue
+
+            create_vector_store_for_video(video_id_to_use)
+            log_msg = f"Successfully created index for '{video.title}'."
+            logger.info(log_msg)
+            all_logs[video_id_to_use] = {'status': 'Created', 'log': log_msg}
+
+        except Exception as e:
+            log_msg = f"Error creating index for '{video.title}': {e}"
+            logger.error(log_msg, exc_info=True)
+            all_logs[video_id_to_use] = {'status': 'Error', 'log': str(e)}
+
+    return Response({'status': 'Completed', 'results': all_logs}, status=status.HTTP_200_OK)
