@@ -1,3 +1,4 @@
+# core/api_note.py
 import json
 import logging
 from django.contrib.auth.decorators import login_required

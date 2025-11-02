@@ -18,19 +18,19 @@ document.addEventListener("DOMContentLoaded", function () {
   if (addNoteForm) {
     addNoteForm.addEventListener("submit", async function (event) {
       event.preventDefault();
-      const videoId = document.getElementById("player-data-container").dataset
-        .videoId;
+      
+      const playerData = document.getElementById("player-data-container").dataset;
+      const platformId = playerData.youtubeId || playerData.vimeoId;
+      
       const formData = new FormData(this);
 
       try {
-        const data = await api.addNote(videoId, formData);
+        const data = await api.addNote(platformId, formData);
         if (data.status === "success") {
           ui.addNoteToUI(data.note_card_html);
           addNoteForm.reset();
           addNoteModal.hide();
           
-          // --- CHANGE 1: REMOVED playVideo() call from here ---
-
         } else {
           console.error("Failed to add note:", data.errors);
         }
@@ -119,7 +119,6 @@ document.addEventListener("DOMContentLoaded", function () {
         typeof window.videoPlayer.currentTime === "number"
       ) {
         
-        // --- CHANGE 2: Use standard .pause() ---
         if (typeof window.videoPlayer.pause === "function") {
           window.videoPlayer.pause();
         }
@@ -129,7 +128,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    // --- CHANGE 3: ADDED listener to resume on hide ---
     addNoteModalEl.addEventListener("hide.bs.modal", function () {
       if (window.videoPlayer && typeof window.videoPlayer.play === "function") {
         window.videoPlayer.play();
@@ -137,16 +135,13 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // --- CHANGE 4: ADDED listeners for Edit Note Modal ---
   if (editNoteModalEl) {
-    // Pause video when edit modal is shown
     editNoteModalEl.addEventListener("show.bs.modal", function () {
       if (window.videoPlayer && typeof window.videoPlayer.pause === "function") {
         window.videoPlayer.pause();
       }
     });
 
-    // Resume video when edit modal is hidden
     editNoteModalEl.addEventListener("hide.bs.modal", function () {
       if (window.videoPlayer && typeof window.videoPlayer.play === "function") {
         window.videoPlayer.play();
