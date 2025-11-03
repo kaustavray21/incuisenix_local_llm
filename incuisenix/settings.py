@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'core',
+    'django_q', # <-- Added Django Q
 ]
 
 MIDDLEWARE = [
@@ -144,10 +145,23 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-SESSION_COOKIE_AGE = 6400  # 80 minutes (in seconds)
+SESSION_COOKIE_AGE = 6400
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 LOGIN_URL = 'home'
 
 FAISS_INDEX_ROOT = os.path.join(BASE_DIR, 'faiss_indexes/')
+
+# --- Django Q Configuration ---
+
+Q_CLUSTER = {
+    'name': 'InCuiseNixQueue',
+    'workers': 4,
+    'timeout': 7200,  # 2 hours for long transcriptions
+    'retry': 7500,    # Retry after 2 hours 5 mins
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',  # Use the default django database
+    'sync': False      # Set to False to run tasks asynchronously
+}

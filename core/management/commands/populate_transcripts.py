@@ -3,15 +3,14 @@ import csv
 import re
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.db import connection
+from django.db import connection, transaction
 from core.models import Video, Transcript
 
 def sanitize_filename(title):
-    """Sanitizes a string for use as a filename/directory."""
     return re.sub(r'[\\/*?:"<>|]', "", title)
 
 class Command(BaseCommand):
-    help = 'Populates the database from CSV files. Use --wipe to clear all transcripts first.'
+    help = 'Manually populates the database from existing CSV files and updates video status.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -19,32 +18,43 @@ class Command(BaseCommand):
             action='store_true',
             help='Wipe all existing transcript data from the database before populating.',
         )
+        parser.add_argument(
+            '--course_id',
+            type=int,
+            help='Optional: The ID of a specific course to populate.',
+        )
 
     def handle(self, *args, **options):
         wipe_data = options['wipe']
+        course_id = options.get('course_id', None)
 
         if wipe_data:
             self.stdout.write(self.style.WARNING('Wiping all existing transcripts from the database...'))
             deleted_count, _ = Transcript.objects.all().delete()
             self.stdout.write(self.style.SUCCESS(f'Successfully deleted {deleted_count} old transcript lines.'))
             
-            self.stdout.write('Resetting transcript table auto-increment counter...')
             try:
                 with connection.cursor() as cursor:
-                    # Note: This table name depends on your app name (e.g., core_transcript)
                     cursor.execute("ALTER TABLE core_transcript AUTO_INCREMENT = 1;")
                 self.stdout.write(self.style.SUCCESS('Successfully reset counter.'))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Could not reset counter: {e}'))
                 self.stdout.write(self.style.WARNING('This may be normal for non-MySQL databases (e.g., SQLite). Continuing...'))
-            
-            # If wiping, we process ALL videos, not just ones without transcripts
+        
+        if course_id:
+            try:
+                course = Video.objects.filter(course_id=course_id)
+                self.stdout.write(f'Processing videos for course ID {course_id}...')
+                videos_to_process = course
+            except:
+                self.stdout.write(self.style.ERROR(f'Course with ID {course_id} not found.'))
+                return
+        elif wipe_data:
             self.stdout.write('Starting full transcript population from CSV files...')
             videos_to_process = Video.objects.all()
         else:
-            # Original "smart" behavior
-            self.stdout.write('Starting smart transcript population from CSV files...')
-            videos_to_process = Video.objects.filter(transcripts__isnull=True).distinct()
+            self.stdout.write('Starting smart transcript population (only "pending" videos)...')
+            videos_to_process = Video.objects.filter(transcript_status='pending')
 
         self.stdout.write(f'Found {videos_to_process.count()} videos to process.')
 
@@ -62,7 +72,7 @@ class Command(BaseCommand):
             file_path = os.path.join(settings.MEDIA_ROOT, 'transcripts', course_dir_safe, f'{video_id}.csv')
 
             if not os.path.exists(file_path):
-                self.stdout.write(self.style.WARNING(f'  -> CSV file not found at: {file_path}. Run generate_transcripts first. Skipping.'))
+                self.stdout.write(self.style.WARNING(f'  -> CSV file not found at: {file_path}. Skipping.'))
                 continue
 
             try:
@@ -99,14 +109,20 @@ class Command(BaseCommand):
                                     platform_id_field: video_id
                                 }
                                 lines_to_create.append(Transcript(**transcript_kwargs))
-                            else:
-                                self.stdout.write(self.style.NOTICE(f"    -> Skipping empty content at row {i+2} in {file_path}"))
                         except (ValueError, TypeError):
                             self.stdout.write(self.style.WARNING(f'  -> Could not parse start time "{start_str}" on row {i+2} in {file_path}. Skipping.'))
 
                 if lines_to_create:
-                    Transcript.objects.bulk_create(lines_to_create)
-                    self.stdout.write(self.style.SUCCESS(f'  -> Successfully populated {len(lines_to_create)} transcript lines from {os.path.basename(file_path)}.'))
+                    with transaction.atomic():
+                        if not wipe_data:
+                            Transcript.objects.filter(video=video).delete()
+                        
+                        Transcript.objects.bulk_create(lines_to_create)
+                        
+                        video.transcript_status = 'complete'
+                        video.save()
+                        
+                    self.stdout.write(self.style.SUCCESS(f'  -> Successfully populated {len(lines_to_create)} lines and set video status to "complete".'))
                 else:
                     self.stdout.write(self.style.WARNING(f'  -> No valid transcript lines were found in {os.path.basename(file_path)}.'))
 

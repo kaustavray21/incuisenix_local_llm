@@ -23,8 +23,6 @@ urlpatterns = [
 
     path('api/transcripts/<str:video_id>/', api_transcript.get_transcript_view, name='api_get_transcripts'),
     
-    path('api/transcripts/generate/<int:video_id>/', api_transcript.generate_transcript_view, name='api_generate_transcript'),
-
     path('api/conversations/', api_conversation.get_conversation_list, name='get_conversation_list'),
     path('api/conversations/<int:conversation_id>/messages/', api_conversation.get_conversation_messages, name='get_conversation_messages'),
     
@@ -36,8 +34,16 @@ urlpatterns = [
     
     path('api/courses/delete/<int:course_id>/', api_course.delete_course_view, name='delete_course'),
     
-    path('api/courses/<int:course_id>/generate_transcripts/', api_course.generate_course_transcripts_view, name='generate_course_transcripts'),
+    path('api/v1/course/<int:course_id>/add-videos/', 
+         api_course.add_videos_to_course_view, 
+         name='api_add_videos'),
     
-    path('api/courses/<int:course_id>/generate_indexes/', api_course.generate_course_indexes_view, name='generate_course_indexes'),
+    path('api/v1/transcript/queue/', 
+         api_transcript.TranscriptQueueView.as_view(), 
+         name='api_queue_transcript'),
+         
+    path('api/v1/index/queue/', 
+         api_transcript.IndexQueueView.as_view(), 
+         name='api_queue_index'),
 ]
 handler4_04 = 'core.views.content_views.custom_404_view'

@@ -6,15 +6,15 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
+from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 
 from ..models import Course, Enrollment, Video
-from ..serializers import CourseSerializer
-from ..transcript_service import generate_transcript_for_video, sanitize_filename
-from ..rag.vector_store import create_vector_store_for_video
+from ..serializers import CourseSerializer, VideoReadOnlySerializer
+from ..transcript_service import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,63 @@ def delete_course_view(request, course_id):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['POST'])
+def add_videos_to_course_view(request, course_id):
+    try:
+        course = get_object_or_404(Course, id=course_id)
+    except Course.DoesNotExist:
+        return Response({"error": "Course not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    video_list = request.data
+    if not isinstance(video_list, list):
+        return Response({"error": "Expected a list of video objects."}, status=status.HTTP_400_BAD_REQUEST)
+
+    created_videos = []
+    errors = []
+
+    for video_data in video_list:
+        title = video_data.get('title')
+        vimeo_id = video_data.get('vimeo_id')
+        youtube_id = video_data.get('youtube_id')
+        
+        if not title:
+            errors.append({"video_data": video_data, "error": "Missing 'title'."})
+            continue
+            
+        if not vimeo_id and not youtube_id:
+            errors.append({"video_data": video_data, "error": "Missing 'vimeo_id' or 'youtube_id'."})
+            continue
+
+        query = Q()
+        if vimeo_id:
+            query |= Q(vimeo_id=vimeo_id)
+        if youtube_id:
+            query |= Q(youtube_id=youtube_id)
+
+        if Video.objects.filter(query).exists():
+            errors.append({"video_data": video_data, "error": "Video with this vimeo_id or youtube_id already exists."})
+            continue
+            
+        try:
+            video = Video.objects.create(
+                course=course,
+                title=title,
+                video_url=video_data.get('video_url', ''),
+                vimeo_id=vimeo_id,
+                youtube_id=youtube_id
+            )
+            created_videos.append(video)
+        except Exception as e:
+            errors.append({"video_data": video_data, "error": str(e)})
+
+    created_serializer = VideoReadOnlySerializer(created_videos, many=True)
+    return Response({
+        "message": f"Successfully created {len(created_videos)} videos.",
+        "created": created_serializer.data,
+        "errors": errors
+    }, status=status.HTTP_201_CREATED)
+
+
 @login_required
 @require_POST
 def enroll_view(request, course_id):
@@ -65,72 +122,3 @@ def roadmap_view(request, course_id):
         'description': course.description,
     }
     return JsonResponse(course_data)
-
-
-@api_view(['POST'])
-def generate_course_transcripts_view(request, course_id):
-    try:
-        course = get_object_or_404(Course, id=course_id)
-    except Course.DoesNotExist:
-        return Response({'status': 'Error', 'log': ['Course not found']}, status=status.HTTP_404_NOT_FOUND)
-
-    videos = Video.objects.filter(course=course)
-    if not videos.exists():
-        return Response({'status': 'Skipped', 'log': ['No videos found for this course']}, status=status.HTTP_200_OK)
-
-    force = request.data.get('force', False)
-    all_logs = {}
-    
-    for video in videos:
-        status_msg, log = generate_transcript_for_video(video, force_generation=force)
-        all_logs[f"Video ID {video.id}: {video.title}"] = {
-            'status': status_msg,
-            'log': log
-        }
-
-    return Response({'status': 'Completed', 'results': all_logs}, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-def generate_course_indexes_view(request, course_id):
-    try:
-        course = get_object_or_404(Course, id=course_id)
-    except Course.DoesNotExist:
-        return Response({'status': 'Error', 'log': ['Course not found']}, status=status.HTTP_404_NOT_FOUND)
-
-    videos = Video.objects.filter(course=course)
-    if not videos.exists():
-        return Response({'status': 'Skipped', 'log': ['No videos found for this course']}, status=status.HTTP_200_OK)
-
-    force_creation = request.data.get('force', False)
-    all_logs = {}
-
-    for video in videos:
-        video_id_to_use = video.youtube_id or video.vimeo_id
-        if not video_id_to_use:
-            log_msg = f"Video '{video.title}' (DB ID: {video.id}) has no platform ID. Skipping."
-            logger.warning(log_msg)
-            all_logs[f"Video ID {video.id}"] = {'status': 'Skipped', 'log': log_msg}
-            continue
-
-        try:
-            index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts', video_id_to_use)
-            faiss_file_path = os.path.join(index_path, "index.faiss")
-
-            if os.path.exists(faiss_file_path) and not force_creation:
-                log_msg = f"Index for '{video.title}' already exists. Skipping."
-                logger.info(log_msg)
-                all_logs[video_id_to_use] = {'status': 'Skipped', 'log': log_msg}
-                continue
-
-            create_vector_store_for_video(video_id_to_use)
-            log_msg = f"Successfully created index for '{video.title}'."
-            logger.info(log_msg)
-            all_logs[video_id_to_use] = {'status': 'Created', 'log': log_msg}
-
-        except Exception as e:
-            log_msg = f"Error creating index for '{video.title}': {e}"
-            logger.error(log_msg, exc_info=True)
-            all_logs[video_id_to_use] = {'status': 'Error', 'log': str(e)}
-
-    return Response({'status': 'Completed', 'results': all_logs}, status=status.HTTP_200_OK)

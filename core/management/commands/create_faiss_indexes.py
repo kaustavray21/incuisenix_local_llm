@@ -1,112 +1,95 @@
 import os
-import re
-import time
+import shutil
+import logging
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from core.models import Video, Transcript
-from core.rag.vector_store import create_vector_store_for_video
-import logging
+from django.db import transaction
+from django.db.models import Q
+from core.models import Course
+from django_q.tasks import async_task
 
 logger = logging.getLogger(__name__)
 
-# No sanitize_filename function needed here anymore, as path logic is simpler.
-
 class Command(BaseCommand):
-    help = 'Creates FAISS indexes for individual video transcripts, skipping existing ones.'
+    help = 'Queues FAISS index generation tasks for courses.'
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--delay',
-            type=int,
-            default=7, # Default delay of 7 seconds to respect 10 RPM limit
-            help='Seconds to wait between processing each video (default: 7s for 10 RPM).',
-        )
-        
-        parser.add_argument(
             '--wipe',
             action='store_true',
-            help='Wipe all existing FAISS transcript indexes before creating new ones.',
+            help='Wipe all existing FAISS transcript indexes and re-queue all courses.',
+        )
+        parser.add_argument(
+            '--course_id',
+            type=int,
+            help='Optional: The ID of a specific course to queue.',
         )
 
     def handle(self, *args, **options):
-        delay_seconds = options['delay']
         wipe_data = options['wipe']
-        
-        self.stdout.write(self.style.SUCCESS(f'Starting FAISS index creation (with {delay_seconds}s delay)...'))
+        course_id = options.get('course_id', None)
 
         if wipe_data:
             self.stdout.write(self.style.WARNING('Wiping all existing FAISS transcript indexes...'))
             index_dir = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts')
             if os.path.exists(index_dir):
-                import shutil
                 shutil.rmtree(index_dir)
                 self.stdout.write(self.style.SUCCESS(f'Deleted directory: {index_dir}'))
             os.makedirs(index_dir, exist_ok=True)
 
-        # We must check all videos
-        videos = Video.objects.all()
+        if course_id:
+            try:
+                base_queryset = Course.objects.filter(id=course_id)
+                if not base_queryset.exists():
+                    raise Course.DoesNotExist
+            except Course.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f'Course with ID {course_id} not found.'))
+                return
+            self.stdout.write(self.style.SUCCESS(f'Queueing FAISS index generation for ONE course...'))
+        else:
+            base_queryset = Course.objects.all()
+            self.stdout.write(self.style.SUCCESS('Queueing FAISS index generation for ALL courses...'))
 
-        if not videos.exists():
-            self.stdout.write(self.style.WARNING('No videos found in the database.'))
+        if wipe_data:
+            self.stdout.write(self.style.WARNING('(--wipe enabled) Re-queueing all courses.'))
+            courses_to_queue = base_queryset
+        else:
+            self.stdout.write('Queueing "none" and "failed" courses.')
+            courses_to_queue = base_queryset.filter(
+                Q(index_status='none') | Q(index_status='failed')
+            )
+        
+        total_found = courses_to_queue.count()
+        if total_found == 0:
+            self.stdout.write('No courses found to queue.')
             return
 
-        processed_count = 0
+        self.stdout.write(f'Found {total_found} courses to queue.')
+
+        queued_count = 0
         skipped_count = 0
-        error_count = 0
 
-        for video in videos:
-            video_id_to_use = video.youtube_id or video.vimeo_id
-            platform = "YouTube" if video.youtube_id else "Vimeo" if video.vimeo_id else "Unknown"
-
-            should_process = True 
-
-            if not video_id_to_use:
-                self.stdout.write(self.style.ERROR(f"Video '{video.title}' (ID: {video.id}) has no ID. Skipping."))
-                error_count += 1
-                should_process = False
-            else:
-                self.stdout.write(f"\nChecking video: {video.title} ({platform} ID: {video_id_to_use})...")
-
-                if not Transcript.objects.filter(video=video).exists():
-                    self.stdout.write(self.style.NOTICE(f"  -> No transcripts found in database. Skipping index creation."))
-                    skipped_count += 1
-                    should_process = False
-                else:
-                    # --- This is the Corrected Path Logic ---
-                    # It now checks the same path that vector_store.py uses
-                    index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts', video_id_to_use)
-                    faiss_file_path = os.path.join(index_path, "index.faiss")
-
-                    if os.path.exists(faiss_file_path) and not wipe_data:
-                        self.stdout.write(self.style.NOTICE(f"  -> FAISS index already exists. Skipping generation."))
+        for course in courses_to_queue:
+            try:
+                with transaction.atomic():
+                    course_locked = Course.objects.select_for_update().get(pk=course.pk)
+                    
+                    if course_locked.index_status == 'indexing' and not wipe_data:
+                        self.stdout.write(self.style.WARNING(f'  Skipping "{course.title}": Already "indexing"'))
                         skipped_count += 1
-                        should_process = False
+                        continue
+                    
+                    course_locked.index_status = 'indexing'
+                    course_locked.save()
+                
+                async_task('core.tasks.task_generate_index', course_locked.id)
+                
+                self.stdout.write(self.style.SUCCESS(f'  Queued: "{course.title}" (ID: {course.id})'))
+                queued_count += 1
+                
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'  Failed to queue "{course.title}": {e}'))
 
-            # --- Process or Skip ---
-            if should_process:
-                self.stdout.write(f"  -> Index not found or wipe enabled. Proceeding with creation...")
-                try:
-                    create_vector_store_for_video(video_id_to_use)
-                    self.stdout.write(self.style.SUCCESS(f"  -> Successfully created index for video: {video.title}"))
-                    processed_count += 1
-                except Exception as e:
-                    if "ResourceExhausted" in str(e) or "429" in str(e):
-                        self.stdout.write(self.style.ERROR(f"  -> RATE LIMIT HIT for video {video.title}. Error: {e}"))
-                        self.stdout.write(self.style.WARNING("    -> Suggestion: Increase delay or check billing/quota."))
-                    else:
-                        self.stdout.write(self.style.ERROR(f"  -> Error creating index for video {video.title}: {e}"))
-                    logger.exception(f"Failed to create FAISS index for video ID {video_id_to_use}")
-                    error_count += 1
-            
-            # --- Add Delay ---
-            if should_process and delay_seconds > 0:
-                self.stdout.write(f"    -> Delaying for {delay_seconds} second(s)...")
-                time.sleep(delay_seconds)
-
-
-        # --- Final Summary ---
-        self.stdout.write(self.style.SUCCESS(f'\nFinished FAISS index creation check.'))
-        self.stdout.write(self.style.SUCCESS(f'Created/Updated {processed_count} indexes.'))
-        self.stdout.write(self.style.NOTICE(f'Skipped {skipped_count} videos.'))
-        if error_count > 0:
-            self.stdout.write(self.style.ERROR(f'{error_count} videos encountered errors.'))
+        self.stdout.write(self.style.SUCCESS(f'\nFinished.'))
+        self.stdout.write(self.style.SUCCESS(f'Successfully queued {queued_count} tasks.'))
+        self.stdout.write(self.style.WARNING(f'Skipped {skipped_count} tasks (already in progress).'))
