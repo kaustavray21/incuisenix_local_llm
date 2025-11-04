@@ -1,10 +1,7 @@
 import os
-import pandas as pd
 import logging
 from django.conf import settings
-from django.db.models import Q
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import DataFrameLoader
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.retrievers import EnsembleRetriever

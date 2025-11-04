@@ -24,17 +24,26 @@
 
   <div class="offcanvas-body assistant-body">
 
+    <template id="assistant-loading-template">
+      <div class="chat-message loading">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </template>
     <div id="assistant-main-view">
       <div id="assistant-chat-box" class="assistant-chat-box">
         </div>
       
       <form id="assistant-form" class="assistant-form">
         <div class="input-group">
-          <input type="text" id="assistant-input" class="form-control" placeholder="Ask about this video..." autocomplete="off">
-          <button id="assistant-send-btn" class="btn btn-primary" type="submit">
+          <textarea id="assistant-input" class="form-control" 
+                    placeholder="Ask about this video..." 
+                    rows="1"></textarea>
+          <button id="assistant-send-btn" class="btn btn-primary" type="submit" disabled>
             <i class="fas fa-paper-plane"></i>
           </button>
-        </div>
+          </div>
       </form>
     </div>
     
@@ -43,5 +52,5 @@
       <div id="assistant-history-list" class="assistant-history-list">
         </div>
     </div>
-    </div>
+  </div>
 </div>

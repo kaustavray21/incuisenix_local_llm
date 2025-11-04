@@ -64,6 +64,10 @@
   flex-direction: column;
   padding: 0;
   background-color: #f8f9fa;
+  /* --- ADDED --- */
+  /* Ensures the flex layout works inside the offcanvas */
+  flex: 1;
+  min-height: 0;
 }
 
 /* --- NEW: Make the main view a flex container to push form down --- */
@@ -106,12 +110,49 @@
   border-bottom-left-radius: 0.25rem;
 }
 
+/* --- UPDATED --- */
 .chat-message.loading {
   background-color: #e9ecef;
   color: #495057;
   align-self: flex-start;
   border-bottom-left-radius: 0.25rem;
+  /* --- ADDED --- */
+  /* Align the dots */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
+
+/* * --- NEW: Typing Indicator (Step 4) ---
+*/
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #495057;
+  border-radius: 50%;
+  animation: typing-pulse 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* --- END NEW --- */
+
 
 .chat-message.assistant p {
   margin-bottom: 0.5rem;
@@ -146,10 +187,15 @@
   flex-shrink: 0;
 }
 
+/* --- UPDATED FOR TEXTAREA (Step 3) --- */
 #assistant-input {
   background-color: #ffffff;
   color: #212529;
   border-color: #ced4da;
+  /* --- ADDED --- */
+  resize: none; /* Disable manual resize */
+  max-height: 150px; /* Set a max growth height */
+  overflow-y: auto; /* Add scrollbar if it gets too big */
 }
 
 #assistant-input:focus {
@@ -162,16 +208,35 @@
   color: #6c757d;
 }
 
+/* --- UPDATED (Step 6) --- */
 #assistant-send-btn {
   background-color: #532aa0;
   border-color: #6f42c1;
   color: #ffffff;
+  /* --- ADDED --- */
+  /* Make the button circular for an icon */
+  width: 42px; /* Set fixed width */
+  height: 42px; /* Set fixed height */
+  padding: 0;
+  font-size: 1.25rem; /* Make icon bigger */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #assistant-send-btn:hover {
   background-color: #946cda;
   border-color: #5a359a;
 }
+
+/* --- ADDED (Step 6) --- */
+/* Style for the send button when disabled */
+#assistant-send-btn:disabled {
+  background-color: #a08cbf;
+  border-color: #a08cbf;
+  opacity: 0.7;
+}
+
 
 /* --- NEW: History View Styles --- */
 #assistant-history-view {

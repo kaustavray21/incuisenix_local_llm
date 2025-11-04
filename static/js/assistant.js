@@ -16,6 +16,17 @@ InCuiseNixAssistant.toggleHistoryView = DomUtils.toggleHistoryView;
 InCuiseNixAssistant.setActiveConversation = State.setActiveConversation;
 InCuiseNixAssistant.getState = State.getState;
 
+// --- (NEW Step 3 & 6) Helper to reset textarea ---
+function resetTextarea(inputEl, buttonEl) {
+  if (inputEl) {
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+  }
+  if (buttonEl) {
+    buttonEl.disabled = true;
+  }
+}
+
 // The original resetChat logic now needs to interact with both State and DOM
 InCuiseNixAssistant.resetChat = function () {
   State.resetCurrentConversation(); // Reset state
@@ -26,9 +37,11 @@ InCuiseNixAssistant.resetChat = function () {
     "assistant"
   );
   DomUtils.toggleHistoryView(false); // Ensure main view is shown
-  // Optionally trigger API to start a new conversation on the backend
-  // const timestamp = window.videoPlayer ? window.videoPlayer.currentTime : 0;
-  // Api.submitQuery(null, timestamp, { forceNew: true });
+  
+  // --- (NEW Step 3 & 6) Also reset the input form ---
+  const assistantInput = document.getElementById("assistant-input");
+  const assistantSendBtn = document.getElementById("assistant-send-btn");
+  resetTextarea(assistantInput, assistantSendBtn);
 };
 
 // *** THIS IS THE FIX ***
@@ -43,16 +56,84 @@ document.addEventListener("DOMContentLoaded", function () {
   const newChatButton = document.getElementById("assistant-new-chat-btn");
   const assistantChat = document.getElementById("assistantOffcanvas");
 
+  // --- (NEW) Get elements for new UI features ---
+  const assistantInput = document.getElementById("assistant-input");
+  const assistantSendBtn = document.getElementById("assistant-send-btn");
+  const loadingTemplate = document.getElementById("assistant-loading-template");
+
+
   // --- Event Listeners ---
 
-  if (assistantForm) {
+  // --- (UPDATED) Form submit handler ---
+  if (assistantForm && assistantInput && assistantSendBtn && loadingTemplate) {
     assistantForm.addEventListener("submit", (event) => {
       event.preventDefault(); // Prevent default form submission
-      const query = DomUtils.getAssistantInputValue(); // Get value via DOM module
+      
+      const query = assistantInput.value.trim();
+      if (!query) {
+        return; // Don't send empty messages
+      }
+
+      // --- (NEW Step 4) Show Typing Indicator ---
+      // This check prevents multiple loading indicators
+      if (!document.getElementById("assistant-loading-msg")) {
+        const loadingEl = loadingTemplate.content.firstElementChild.cloneNode(true);
+        loadingEl.id = "assistant-loading-msg"; // Give it an ID to find later
+        
+        // Use the DOM module to append the element and scroll
+        if (typeof DomUtils.appendElementToChatBox === "function") {
+            DomUtils.appendElementToChatBox(loadingEl); 
+        } else {
+            // Fallback if the function doesn't exist (it should)
+            document.getElementById("assistant-chat-box").appendChild(loadingEl);
+        }
+
+        if (typeof DomUtils.scrollToBottom === "function") {
+            DomUtils.scrollToBottom();
+        }
+      }
+      
+      // NOTE: The loading indicator MUST be removed by the Api.submitQuery 
+      // function (or its callbacks) after the API call completes.
+      // We are just adding it here.
+      // --- END (Step 4) ---
+
       const timestamp = window.videoPlayer ? window.videoPlayer.currentTime : 0;
       Api.submitQuery(query, timestamp); // Call API module function
+      
+      // --- (NEW Step 3 & 6) Reset textarea and button after submit ---
+      resetTextarea(assistantInput, assistantSendBtn);
     });
   }
+
+  // --- (NEW Step 3 & 6) Listeners for auto-growing textarea and smart button ---
+  if (assistantInput && assistantSendBtn) {
+    assistantInput.addEventListener("input", () => {
+      // --- (Step 6) Smarter Send Button ---
+      const isInputEmpty = assistantInput.value.trim() === "";
+      assistantSendBtn.disabled = isInputEmpty;
+
+      // --- (Step 3) Auto-Growing Textarea ---
+      assistantInput.style.height = "auto"; // Reset height to allow shrinking
+      assistantInput.style.height = `${assistantInput.scrollHeight}px`; // Set to content height
+    });
+  }
+
+  // --- (NEW) Listener for Enter-to-Submit ---
+  if (assistantInput && assistantForm && assistantSendBtn) {
+      assistantInput.addEventListener("keydown", (event) => {
+        // Submit on Enter, but allow Shift+Enter for new line
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          // Manually trigger the form's submit event if not disabled
+          if (!assistantSendBtn.disabled) {
+            assistantForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+          }
+        }
+      });
+  }
+  // --- END NEW ---
+
 
   if (newChatButton) {
     newChatButton.addEventListener("click", () => {
@@ -96,6 +177,11 @@ document.addEventListener("DOMContentLoaded", function () {
         // Ensure main view is visible if resuming
         DomUtils.toggleHistoryView(false);
       }
+      
+      // --- (NEW) Reset textarea on open ---
+      const assistantInput = document.getElementById("assistant-input");
+      const assistantSendBtn = document.getElementById("assistant-send-btn");
+      resetTextarea(assistantInput, assistantSendBtn);
     });
   }
 
