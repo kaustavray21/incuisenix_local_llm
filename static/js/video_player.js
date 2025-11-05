@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let transcripts = [];
     let player;
 
+    let pinnedLineContainer = document.getElementById('transcript-current-line');
+    let lastActiveLine = null;
+
     function formatTimestamp(seconds) {
         const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
         const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -84,9 +87,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!transcriptVideoId) return;
         
         const transcriptContent = document.getElementById('transcript-content');
-        if (!transcriptContent) return;
+        const loadingSpinner = document.getElementById('transcript-loading-spinner');
+        const unavailableTemplate = document.getElementById('transcript-unavailable-template');
 
-        transcriptContent.innerHTML = '<p>Loading transcript...</p>';
+        if(pinnedLineContainer) {
+             pinnedLineContainer.innerHTML = `
+                <span class="text-content text-muted">Loading transcript...</span>
+             `;
+        }
+
+        if (!transcriptContent || !loadingSpinner || !unavailableTemplate) return;
 
         try {
             const response = await fetch(`/api/transcripts/${transcriptVideoId}/`);
@@ -95,12 +105,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             transcripts = await response.json();
 
+            loadingSpinner.remove();
+
             if (transcripts.length === 0) {
-                transcriptContent.innerHTML = '<p>No transcript available for this video.</p>';
+                const unavailableEl = unavailableTemplate.content.cloneNode(true);
+                transcriptContent.appendChild(unavailableEl);
+                if(pinnedLineContainer) {
+                    pinnedLineContainer.innerHTML = `
+                        <span class="text-content text-muted">No transcript available.</span>
+                    `;
+                }
                 return;
             }
-
+            
             transcriptContent.innerHTML = '';
+            
+            if(pinnedLineContainer && transcripts.length > 0) {
+                pinnedLineContainer.innerHTML = `
+                    <span class="transcript-timestamp">${formatTimestamp(transcripts[0].start)}</span>
+                    <span class="text-content">${transcripts[0].content}</span>
+                `;
+            }
 
             transcripts.forEach(line => {
                 const lineElement = document.createElement('div');
@@ -111,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 lineElement.innerHTML = `
                     <span class="transcript-timestamp">${timestamp}</span>
-                    <span class="transcript-text">${line.content}</span>
+                    <span class="text-content">${line.content}</span>
                 `;
                 
                 lineElement.addEventListener('click', () => {
@@ -126,46 +151,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Error loading transcript:', error);
-            transcriptContent.innerHTML = '<p>Sorry, an error occurred while loading the transcript.</p>';
+            
+            loadingSpinner.remove();
+            const unavailableEl = unavailableTemplate.content.cloneNode(true);
+            transcriptContent.appendChild(unavailableEl);
+            if(pinnedLineContainer) {
+                pinnedLineContainer.innerHTML = `
+                    <span class="text-content text-muted">Error loading transcript.</span>
+                `;
+            }
         }
     }
 
     function highlightTranscript(currentTime) {
-        const transcriptContent = document.getElementById('transcript-content');
-        if (!transcriptContent || !player) return;
-
-        const lines = transcriptContent.querySelectorAll('.transcript-line');
-        let activeLine = null;
+        if (!pinnedLineContainer || !player || transcripts.length === 0) return;
 
         const duration = player.duration; 
+        let activeLineData = null;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const nextLine = lines[i + 1];
+        for (let i = 0; i < transcripts.length; i++) {
+            const line = transcripts[i];
+            const nextLine = transcripts[i + 1];
             
-            const startTime = parseFloat(line.dataset.start);
-            const endTime = nextLine ? parseFloat(nextLine.dataset.start) : (duration || startTime + 5); 
+            const startTime = line.start;
+            const endTime = nextLine ? nextLine.start : (duration || Infinity); 
 
             if (currentTime >= startTime && currentTime < endTime) {
-                line.classList.add('active');
-                activeLine = line;
-            } else {
-                line.classList.remove('active');
+                activeLineData = line;
+                break;
             }
         }
 
-        if (activeLine && !isElementInView(activeLine)) {
-             activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (activeLineData && activeLineData !== lastActiveLine) {
+            lastActiveLine = activeLineData;
+            
+            const timestamp = formatTimestamp(activeLineData.start);
+            
+            pinnedLineContainer.innerHTML = `
+                <span class="transcript-timestamp">${timestamp}</span>
+                <span class="text-content">${activeLineData.content}</span>
+            `;
+        } else if (!activeLineData && lastActiveLine !== null) {
+            lastActiveLine = null;
+            pinnedLineContainer.innerHTML = `<span class="text-content text-muted">...</span>`;
         }
-    }
-
-    function isElementInView(el) {
-        const rect = el.getBoundingClientRect();
-        const parentRect = el.parentElement.getBoundingClientRect();
-        return (
-            rect.top >= parentRect.top &&
-            rect.bottom <= parentRect.bottom
-        );
     }
     
     function setupPlayerEvents(playerInstance) {

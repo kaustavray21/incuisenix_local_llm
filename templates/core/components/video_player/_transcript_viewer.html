@@ -6,8 +6,28 @@
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
+  
   <div class="offcanvas-body">
+    
+    <div id="transcript-pinned-view">
+      <div id="transcript-current-line">
+        <span class="transcript-timestamp">00:00</span>
+        <span class="text-content text-muted">Loading transcript...</span>
+      </div>
+    </div>
+    <template id="transcript-unavailable-template">
+      <div class="text-center p-3 text-muted">
+        <i class="fas fa-info-circle fs-4 mb-2"></i>
+        <p>A transcript is not yet available for this video.</p>
+      </div>
+    </template>
+
     <div id="transcript-content" class="transcript-content-body">
+      <div id="transcript-loading-spinner" class="d-flex justify-content-center p-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
-  </div>
+      </div>
+    </div>
+    </div>
 </div>

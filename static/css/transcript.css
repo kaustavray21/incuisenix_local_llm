@@ -10,7 +10,7 @@
 /* --- UPDATED: Offcanvas Header (Purple Theme) --- */
 #transcriptOffcanvas .offcanvas-header {
     background-color: #9370DB; /* Purple background */
-    border-bottom: 1px solid #7b1fa2; /* Darker purple border */
+    border-bottom: 1px solid #6f42c1/* Darker purple border */
 }
 
 /* --- UPDATED: Offcanvas Title (Purple Theme) --- */
@@ -37,11 +37,83 @@
     overflow: hidden; 
 }
 
-/* --- UPDATED: This is the new scrollable content area --- */
+/* * --- UPDATED: Pinned view for the current line ---
+ * This section is now styled as the animated "card"
+*/
+#transcript-pinned-view {
+    flex-shrink: 0;
+    position: relative;
+    display: flex; /* Using flex to center content */
+    place-items: center;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #fdfcff; /* A very light purple-white */
+    margin: 0.75rem; /* Add some margin */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* --- THIS BLOCK IS UPDATED --- */
+/* This is the rotating gradient */
+#transcript-pinned-view::before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+
+    /* 1. Create the "comet" shape (narrow and tall) */
+    width: 150px;
+    height: 150%;
+    
+    /* 2. Position the element's top-left corner at the card's center */
+    top: 50%;
+    left: 50%;
+
+    /* 3. Use translate() to pull the element's *center*
+          onto the card's center. This is the key. */
+    transform: translate(-50%, -50%);
+
+    /* 4. Your gradient and animation */
+    background-image: linear-gradient(180deg, #9370DB, #6f42c1);
+    animation: rotBGimg 4s linear infinite;
+    transition: all 0.4s linear;
+}
+
+/* This is the inner content background */
+#transcript-pinned-view::after {
+    content: '';
+    position: absolute;
+    background: #ffffff; /* Use solid white for the inside */
+    inset: 4px; /* This creates the 4px "border" */
+    border-radius: 7px; /* Must be smaller than parent's 10px */
+    z-index: 2;
+}
+
+/* This is the text content */
+#transcript-current-line {
+    line-height: 1.6;
+    font-size: 0.95rem;
+    position: relative; /* Make sure it's on top */
+    z-index: 3; /* Sits on top of the ::after element */
+    padding: 1rem; /* Padding for the text */
+    width: 100%; /* Ensure it spans the full card */
+}
+
+#transcript-current-line .transcript-timestamp {
+    color: #9370DB;
+    font-weight: bold;
+    margin-right: 0.75rem;
+}
+
+#transcript-current-line .text-content {
+    color: #000000;
+    font-weight: 500;
+}
+/* --- END OF UPDATED STYLES --- */
+
+
+/* --- This is the scrollable content area --- */
 #transcript-content {
     flex-grow: 1;
     overflow-y: auto;
-    height: 100%;
     background-color: #ffffff;
 }
 
@@ -94,12 +166,15 @@
     color: #7b1fa2; /* Darker purple on hover */
 }
 
-.transcript-line.active {
-    background-color: rgba(147, 112, 219, 0.2);
-    box-shadow: 0 0 10px rgba(147, 112, 219, 0.4);
-    border-radius: 4px;
-}
-
-.transcript-line.active .text-content {
-    color: #000000;
+/* --- THIS BLOCK IS UPDATED --- */
+/* --- Keyframe animation for the gradient --- */
+@keyframes rotBGimg {
+    from {
+        /* Start centered and at 0 degrees */
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+        /* End centered and at 360 degrees */
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }
