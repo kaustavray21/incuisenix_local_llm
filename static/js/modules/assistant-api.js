@@ -5,7 +5,7 @@ import * as DomUtils from "./assistant-dom.js"; // Use DomUtils for UI feedback
 import * as State from "./assistant-state.js"; // Use State to get/set conversation details
 
 const csrfToken = getCookie("csrftoken");
-const ASSISTANT_API_URL = "/api/assistant/";
+const ASSISTANT_API_URL = "/api/engine/assistant/";
 
 /**
  * --- (NEW) ---

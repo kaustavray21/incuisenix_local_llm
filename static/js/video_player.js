@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function initializeVimeoPlayer(element, config, videoModelId) {
         try {
+            // This URL was NOT in your engine/urls.py, so we assume it's correct.
             const response = await fetch(`/api/get-vimeo-links/${videoModelId}/`);
             if (!response.ok) {
                 const errorData = await response.json();
@@ -99,7 +100,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!transcriptContent || !loadingSpinner || !unavailableTemplate) return;
 
         try {
-            const response = await fetch(`/api/transcripts/${transcriptVideoId}/`);
+            // --- THIS LINE IS UPDATED ---
+            const response = await fetch(`/api/engine/transcripts/${transcriptVideoId}/`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

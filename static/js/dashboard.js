@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       try {
         // Fetch roadmap data
-        const response = await fetch(`/roadmap/${courseId}/`);
+        const response = await fetch(`api/engine/roadmap/${courseId}/`);
         if (!response.ok) {
           throw new Error("Failed to load course data.");
         }
