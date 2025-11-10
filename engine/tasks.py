@@ -1,5 +1,5 @@
 import logging
-from .transcript_service import _perform_transcript_generation
+from ..core.transcript_service import _perform_transcript_generation
 from .rag.vector_store import perform_course_index_generation
 from .rag.index_notes import update_video_notes_index
 from  models import Note, Video
