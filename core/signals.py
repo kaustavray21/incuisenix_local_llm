@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import Note
+from core.models import Note
 from django_q.tasks import async_task
 import logging
 
@@ -16,26 +16,27 @@ def on_note_save(sender, instance, created, **kwargs):
         platform_id = instance.video.youtube_id or instance.video.vimeo_id
 
         if platform_id:
+            # If an existing note is updated, mark it as 'pending'
             if not created and instance.index_status != 'pending':
-                Note.objects.filter(pk = instance.pk).update(index_status = 'pending')
-                logger.info(f"Signal: Queuing note index update for user {instance.user.id}, video {platform_id}")
-                async_task('core.tasks.task_update_note_index', user_id = instance.user.id, video_id = platform_id)
+                Note.objects.filter(pk=instance.pk).update(index_status='pending')
+            
+            # Queue the task for BOTH new and updated notes
+            logger.info(f"Signal: Queuing note index update for user {instance.user.id}, video {platform_id}")
+            async_task('engine.tasks.task_update_note_index', user_id=instance.user.id, video_id=platform_id)
         else:
             logger.warning(f"Signal: Note {instance.pk} was saved, but its video has no platform_id. Cannot queue task.")
 
 @receiver(post_delete, sender=Note)
 def on_note_delete(sender, instance, **kwargs):
+    """
+    When a note is deleted, queue an async task to rebuild the index
+    for that user/video, which will now exclude the deleted note.
+    """
     if instance.video:
-        """
-        When a note is deleted, queue an async task to rebuild the index
-        for that user/video, which will now exclude the deleted note.
-        """
         platform_id = instance.video.youtube_id or instance.video.vimeo_id
 
         if platform_id:
             logger.info(f"Signal: Queuing note index update (due to delete) for user {instance.user.id}, video {platform_id}")
-            async_task('core.tasks.taks_update_note_index', user_id = instance.user.id, video_id = platform_id)
+            async_task('engine.tasks.task_update_note_index', user_id=instance.user.id, video_id=platform_id)
         else:
             logger.warning(f"Signal: Note {instance.pk} was deleted, but its video has no platform_id. Cannot queue task.")
-
-            

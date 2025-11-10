@@ -7,7 +7,7 @@ import vimeo
 import pandas as pd
 import logging
 from django.conf import settings
-from .models import Video, Transcript
+from core.models import Video, Transcript
 from youtube_transcript_api import YouTubeTranscriptApi
 
 logger = logging.getLogger(__name__)
@@ -231,4 +231,3 @@ def _perform_transcript_generation(video_id: int):
             log_list.append(f'--- Finished. Set video {video.id} status to "failed" ---')
             
         return "Error", log_list
-    

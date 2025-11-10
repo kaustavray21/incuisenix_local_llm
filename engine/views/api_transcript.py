@@ -8,13 +8,13 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, Http404
 from django.db import transaction
 
-from ..models import Transcript, Video, Course
+from core.models import Transcript, Video, Course
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAdminUser
 
-from ..transcript_service import sanitize_filename
+from engine.transcript_service import sanitize_filename
 from django_q.tasks import async_task
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class TranscriptQueueView(APIView):
                 video_locked.transcript_status = 'processing'
                 video_locked.save()
 
-            async_task('core.tasks.task_generate_transcript', video_locked.id)
+            async_task('engine.tasks.task_generate_transcript', video_locked.id)
             
             logger.info(f"Queued transcript generation for video {video_locked.id}")
             return Response(
@@ -123,7 +123,7 @@ class IndexQueueView(APIView):
                 course_locked.index_status = 'indexing'
                 course_locked.save()
 
-            async_task('core.tasks.task_generate_index', course_locked.id)
+            async_task('engine.tasks.task_generate_index', course_locked.id)
             
             logger.info(f"Queued index generation for course {course_locked.id}")
             return Response(

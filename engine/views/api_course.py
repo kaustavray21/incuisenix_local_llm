@@ -12,9 +12,9 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 
-from ..models import Course, Enrollment, Video
-from ..serializers import CourseSerializer, VideoReadOnlySerializer
-from ..transcript_service import sanitize_filename
+from core.models import Course, Enrollment, Video
+from core.serializers import CourseSerializer, VideoReadOnlySerializer
+from engine.transcript_service import sanitize_filename
 
 logger = logging.getLogger(__name__)
 

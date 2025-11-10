@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Count
 from core.models import Video
-from core.rag.index_notes import update_video_notes_index
+from engine.rag.index_notes import update_video_notes_index
 import time
 
 class Command(BaseCommand):
