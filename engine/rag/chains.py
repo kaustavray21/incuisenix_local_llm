@@ -7,7 +7,7 @@ from operator import itemgetter
 from .vector_store import get_retriever
 
 
-LLM_MODEL = "gemini-2.5-flash" # Use flash for speed
+LLM_MODEL = "gemini-2.5-flash" 
 
 # --- NEW: A more advanced classifier ---
 def get_query_type_classifier_chain():

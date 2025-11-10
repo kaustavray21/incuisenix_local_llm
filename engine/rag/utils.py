@@ -9,7 +9,7 @@ from .chains import (
     get_general_chain,
     get_query_type_classifier_chain
 )
-from ..models import Transcript, Note, Video # Import Video
+from core.models import Transcript, Note, Video 
 
 logger = logging.getLogger(__name__)
 

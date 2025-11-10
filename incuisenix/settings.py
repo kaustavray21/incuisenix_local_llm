@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'core',
-    'django_q', # <-- Added Django Q
+    'django_q',
+    'engine',
 ]
 
 MIDDLEWARE = [

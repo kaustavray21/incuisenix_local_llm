@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from django.conf import settings
 from django.contrib.auth.models import User
 from core.models import Note, Video
-from .vector_store import get_embeddings # Assuming get_embeddings is in this relative path
+from .vector_store import get_embeddings 
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,6 @@ def update_video_notes_index(video: Video, user: User):
     try:
         notes = Note.objects.filter(video=video, user=user)
 
-        # --- THIS IS THE FIX ---
         # Get the actual platform ID (YouTube or Vimeo)
         platform_id = video.youtube_id or video.vimeo_id
         if not platform_id:
@@ -30,9 +29,8 @@ def update_video_notes_index(video: Video, user: User):
             settings.FAISS_INDEX_ROOT,
             'notes',
             str(user.id),
-            platform_id # <-- Use the correct platform ID here
+            platform_id 
         )
-        # --- END OF FIX ---
 
         if not notes.exists():
             if os.path.exists(index_dir):
