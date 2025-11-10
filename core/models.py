@@ -91,6 +91,16 @@ class Note(models.Model):
     video_timestamp = models.PositiveIntegerField(help_text="Timestamp in seconds")
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+    INDEX_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('complete', 'Complete'),
+        ('failed', 'Failed'),
+    ]
+
+    index_status = models.CharField(max_length=20, choices= INDEX_STATUS_CHOICES,)
+
     class Meta:
         ordering = ['-created_at']
 

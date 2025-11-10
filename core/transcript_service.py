@@ -231,3 +231,4 @@ def _perform_transcript_generation(video_id: int):
             log_list.append(f'--- Finished. Set video {video.id} status to "failed" ---')
             
         return "Error", log_list
+    
