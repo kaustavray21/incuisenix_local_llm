@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } else if (provider === 'vimeo') {
             playerConfig.settings.push('quality');
-            initializeVimeoPlayer(playerElement, config, videoId);
+            initializeVimeoPlayer(playerElement, playerConfig, videoId);
         
         }
     }
