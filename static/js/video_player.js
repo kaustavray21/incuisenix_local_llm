@@ -49,14 +49,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } else if (provider === 'vimeo') {
             playerConfig.settings.push('quality');
-            initializeVimeoPlayer(playerElement, playerConfig, videoId);
+            initializeVimeoPlayer(playerElement, config, videoId);
         
         }
     }
 
     async function initializeVimeoPlayer(element, config, videoModelId) {
         try {
-            // This URL was NOT in your engine/urls.py, so we assume it's correct.
             const response = await fetch(`/api/get-vimeo-links/${videoModelId}/`);
             if (!response.ok) {
                 const errorData = await response.json();
@@ -100,8 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!transcriptContent || !loadingSpinner || !unavailableTemplate) return;
 
         try {
-            // --- THIS LINE IS UPDATED ---
-            const response = await fetch(`/api/engine/transcripts/${transcriptVideoId}/`);
+            const response = await fetch(`/api/transcripts/${transcriptVideoId}/`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

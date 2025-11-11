@@ -7,14 +7,11 @@ document.addEventListener("DOMContentLoaded", function () {
     link.addEventListener("click", async function (event) {
       event.preventDefault();
 
-      // Deactivate other links
       courseLinks.forEach((l) => l.classList.remove("active"));
-      // Activate clicked link
       this.classList.add("active");
 
       const courseId = this.getAttribute("data-course-id");
 
-      // Hide welcome, show roadmap with loading indicator
       welcomeContainer.style.display = "none";
       roadmapContainer.style.display = "block";
       roadmapContainer.innerHTML = `
@@ -26,14 +23,12 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
 
       try {
-        // Fetch roadmap data
-        const response = await fetch(`api/engine/roadmap/${courseId}/`);
+        const response = await fetch(`/api/roadmap/${courseId}/`);
         if (!response.ok) {
           throw new Error("Failed to load course data.");
         }
         const data = await response.json();
 
-        // Build roadmap HTML (link to the first video)
         const firstVideoUrl = `/courses/${courseId}/`;
         let roadmapHTML = `
                 <div class="row justify-content-center mb-4"> 
@@ -47,9 +42,8 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                     </div>
                 </div>
-                `; // Note: Fixed typo 'classrow' to 'class="row ..."'
+                `;
 
-        // Display roadmap
         roadmapContainer.innerHTML = roadmapHTML;
       } catch (error) {
         console.error("Error fetching roadmap:", error);

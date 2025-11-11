@@ -74,18 +74,19 @@ document.addEventListener("DOMContentLoaded", function () {
       if (editButton) {
         ui.populateEditModal(noteCard);
       } else if (deleteButton) {
-        if (confirm("Are you sure you want to delete this note?")) {
-          try {
-            const data = await api.deleteNote(noteId);
-            if (data.status === "success") {
-              noteCard.remove();
-            } else {
-              console.error("Failed to delete note:", data.message);
-            }
-          } catch (error) {
-            console.error("Error deleting note:", error);
+        // --- FIX: Removed confirm() call which does not work ---
+        // You should replace this with a custom modal for better UX
+        try {
+          const data = await api.deleteNote(noteId);
+          if (data.status === "success") {
+            noteCard.remove();
+          } else {
+            console.error("Failed to delete note:", data.message);
           }
+        } catch (error) {
+          console.error("Error deleting note:", error);
         }
+        // --- END FIX ---
       } else {
         const note = {
           id: noteCard.dataset.noteId,
