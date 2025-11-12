@@ -7,15 +7,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 from django.db.models import Q
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
 from core.models import Course, Enrollment, Video
 from core.serializers import CourseSerializer, VideoReadOnlySerializer
-from engine.transcript_service import sanitize_filename
-
+from engine.transcript_service.utils import sanitize_filename
 logger = logging.getLogger(__name__)
 
 
@@ -37,14 +35,33 @@ def delete_course_view(request, course_id):
         transcript_dir_path = os.path.join(settings.MEDIA_ROOT, 'transcripts', course_dir_safe)
 
         if os.path.isdir(transcript_dir_path):
-            shutil.rmtree(transcript_dir_path)
-            
-        course.delete()
+            try:
+                shutil.rmtree(transcript_dir_path)
+                logger.info(f"Removed Transcript directory : {transcript_dir_path}")
+            except OSError as e:
+                logger.error(f"Error removing transcript directory {transcript_dir_path} : {e}")
         
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        videos_to_delete = list(course.videos.all())
+        for video in videos_to_delete :
+            video_string_id = video.youtube_id or video.vimeo_id
+
+            if video_string_id:
+                faiss_index_dir = os.path.join(settings.FAISS_INDEX_ROOT,video_string_id)
+
+                if os.path.isdir(faiss_index_dir):
+                    try:
+                        shutil.rmtree(faiss_index_dir)
+                        logger.info(f"Removed FAISS index directory:{ faiss_index_dir}")
+                    except OSError as e:
+                        logger.error(f"Error removing Faiss index {faiss_index_dir}: {e}")
+        course.delete()
+        logger.info(f"Successfully deleted Course {course_id}from database.")
+
+        return Response(status = status.HTTP_204_NO_CONTENT)
     
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"An unexpected error occured deleting course{course_id}:{e}", exc_info=True)
+        return Response({'error': 'An unexpected server error occured.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def add_videos_to_course_view(request, course_id):

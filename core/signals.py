@@ -1,26 +1,33 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from core.models import Note
+from core.models import Note, Video
 from django_q.tasks import async_task
 import logging
 
 logger = logging.getLogger(__name__)
 
+@receiver(post_save, sender=Video)
+def on_video_save(sender, instance, created, **kwargs):
+    if created:
+        logger.info(f"Signal: New video created (ID: {instance.pk}). Scheduling processing pipeline.")
+        
+        instance.transcript_status = 'processing'
+        instance.save(update_fields=['transcript_status'])
+        
+        async_task(
+            'engine.tasks.task_process_new_video',
+            instance.pk
+        )
+
 @receiver(post_save, sender=Note)
 def on_note_save(sender, instance, created, **kwargs):
-    """
-    When a note is saved (created or updated), queue an async task
-    to update the user's FAISS index for this video.
-    """
     if instance.video:
         platform_id = instance.video.youtube_id or instance.video.vimeo_id
 
         if platform_id:
-            # If an existing note is updated, mark it as 'pending'
             if not created and instance.index_status != 'pending':
                 Note.objects.filter(pk=instance.pk).update(index_status='pending')
             
-            # Queue the task for BOTH new and updated notes
             logger.info(f"Signal: Queuing note index update for user {instance.user.id}, video {platform_id}")
             async_task('engine.tasks.task_update_note_index', user_id=instance.user.id, video_id=platform_id)
         else:
@@ -28,10 +35,6 @@ def on_note_save(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Note)
 def on_note_delete(sender, instance, **kwargs):
-    """
-    When a note is deleted, queue an async task to rebuild the index
-    for that user/video, which will now exclude the deleted note.
-    """
     if instance.video:
         platform_id = instance.video.youtube_id or instance.video.vimeo_id
 

@@ -38,7 +38,7 @@ def perform_course_index_generation(course_id: int):
 
         for video in videos:
             try:
-                _create_index_for_single_video(video)
+                create_index_for_single_video(video)
                 success_count += 1
             except Exception as e:
                 logger.error(f"Failed to create index for video {video.id} ('{video.title}'): {e}", exc_info=True)
@@ -62,7 +62,7 @@ def perform_course_index_generation(course_id: int):
         return "Error", str(e)
 
 
-def _create_index_for_single_video(video: Video):
+def create_index_for_single_video(video: Video):
     logger.info(f"Creating vector store for video: '{video.title}'")
 
     platform_id = video.youtube_id or video.vimeo_id

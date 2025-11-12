@@ -1,6 +1,6 @@
 import logging
-from .transcript_service import _perform_transcript_generation
-from .rag.vector_store import perform_course_index_generation
+from .transcript_service.orchestrator import generate_transcript_for_video
+from .rag.vector_store import perform_course_index_generation, create_index_for_single_video
 from .rag.index_notes import update_video_notes_index
 from core.models import Note, Video
 from django.contrib.auth.models import User
@@ -8,9 +8,32 @@ from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
+def task_process_new_video(video_id: int):
+    logger.info(f"Django-Q: Starting NEW VIDEO pipeline for video {video_id}")
+    
+    try:
+        video = Video.objects.get(id=video_id)
+        
+        logger.info(f"Pipeline: 1. Generating transcript for video {video_id}")
+        status, log = generate_transcript_for_video(video_id)
+        
+        if status == "Error":
+            raise Exception(f"Transcript generation failed. Log: {log}")
+            
+        logger.info(f"Pipeline: 2. Creating FAISS index for video {video_id}")
+        create_index_for_single_video(video)
+        
+        logger.info(f"Django-Q: NEW VIDEO pipeline SUCCESS for video {video_id}.")
+        
+    except Exception as e:
+        logger.error(f"Django-Q: NEW VIDEO pipeline FAILED for video {video_id}. Error: {e}", exc_info=True)
+        if 'video' in locals() and video:
+            video.transcript_status = 'failed'
+            video.save(update_fields=['transcript_status'])
+
 def task_generate_transcript(video_id: int):
     logger.info(f"Django-Q: Starting transcript task for video {video_id}")
-    status, log = _perform_transcript_generation(video_id)
+    status, log = generate_transcript_for_video(video_id)
     if status == "Error":
         logger.error(f"Django-Q: Transcript task FAILED for video {video_id}. Log: {log}")
     else:
@@ -25,14 +48,6 @@ def task_generate_index(course_id: int):
         logger.info(f"Django-Q: Index task SUCCESS for course {course_id}.")
 
 def task_update_note_index(user_id: int, video_id: str):
-    """
-    Asynchronous task to rebuild the note index for a specific user and video.
-    This task is triggered by signals when a new video is saved or deleted
-
-    Args:
-        user_id: The ID of the User whose notes are being indexed.
-        video_id: The platform_id (youtube_id or vimeo_id) of the Video.
-    """
     try:
         logger.info(f"Djang-Q : Starting note index update for user {user_id}, video {video_id}")
         user  = User.objects.get(id=user_id)
@@ -45,8 +60,6 @@ def task_update_note_index(user_id: int, video_id: str):
 
         notes_to_process.update(index_status = 'complete')
 
-        logger.info(f"Django-Q: Starting note index update for user {user_id}, video {video_id}")
-
     except Video.DoesNotExist:
         logger.error(f"Django-Q: Failed note index task for platform_id {video_id} for user {user_id}")
     except User.DoesNotExist:
@@ -56,6 +69,6 @@ def task_update_note_index(user_id: int, video_id: str):
 
         try:
             if 'video' in locals() and 'user' in locals():
-                Note.objects,filter(user = user, video = video, index_status = 'processing').update(index_status = 'failed')
+                Note.objects.filter(user = user, video = video, index_status = 'processing').update(index_status = 'failed')
         except Exception as e_update:
             logger.error(f"Django-Q: Could not even set status to 'failed' for user {user_id}, video {video_id}: {e_update}")

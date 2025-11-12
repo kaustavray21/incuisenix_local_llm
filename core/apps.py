@@ -5,5 +5,7 @@ class CoreConfig(AppConfig):
     name = 'core'
 
     def ready(self):
-        # This imports the signals from core/signals.py
+        """
+        Import signals when the app is ready.
+        """
         import core.signals

@@ -14,7 +14,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAdminUser
 
-from engine.transcript_service import sanitize_filename
+from engine.transcript_service.utils import sanitize_filename
 from django_q.tasks import async_task
 
 logger = logging.getLogger(__name__)
