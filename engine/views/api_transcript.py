@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class TranscriptQueueView(APIView):
-    permission_classes = [IsAdminUser]
 
     def post(self, request, *args, **kwargs):
         external_id = request.data.get('external_id')
@@ -87,7 +86,7 @@ class TranscriptQueueView(APIView):
 
 
 class IndexQueueView(APIView):
-    permission_classes = [IsAdminUser]
+
     def post(self, request, *args, **kwargs):
         course_id = request.data.get('course_id')
         

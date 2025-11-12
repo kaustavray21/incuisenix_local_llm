@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
 def create_course_view(request):
     if request.method == 'POST':
         serializer = CourseSerializer(data=request.data)
@@ -30,7 +29,6 @@ def create_course_view(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
-@permission_classes([IsAdminUser])
 def delete_course_view(request, course_id):
     try:
         course = get_object_or_404(Course, id=course_id)
@@ -49,7 +47,6 @@ def delete_course_view(request, course_id):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
 def add_videos_to_course_view(request, course_id):
     try:
         course = get_object_or_404(Course, id=course_id)
