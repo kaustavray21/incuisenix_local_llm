@@ -1,10 +1,10 @@
 import logging
 from .transcript_service.orchestrator import generate_transcript_for_video
-from .rag.vector_store import perform_course_index_generation, create_index_for_single_video
+from .rag.vector_store.indexer import perform_course_index_generation, create_index_for_single_video
 from .rag.index_notes import update_video_notes_index
 from core.models import Note, Video
 from django.contrib.auth.models import User
-from django.db.models import Q 
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 

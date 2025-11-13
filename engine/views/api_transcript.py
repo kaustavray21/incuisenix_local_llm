@@ -7,13 +7,10 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, Http404
 from django.db import transaction
-
 from core.models import Transcript, Video, Course
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser
-
 from engine.transcript_service.utils import sanitize_filename
 from django_q.tasks import async_task
 
