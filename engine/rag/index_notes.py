@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from django.conf import settings
 from django.contrib.auth.models import User
 from core.models import Note, Video
-from .vector_store import get_embeddings 
+from .vector_store.config import get_embeddings
 import logging
 
 logger = logging.getLogger(__name__)
