@@ -33,7 +33,7 @@ def get_query_type_classifier_chain():
 # --- END NEW ---
 
 
-def get_rag_chain(video_id: str, user_id: int):
+def get_rag_chain(video_id: str, user_id: int | None):
     retriever = get_retriever(video_id, user_id=user_id)
 
     prompt_template = """

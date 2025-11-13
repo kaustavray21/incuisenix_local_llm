@@ -4,7 +4,7 @@ from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework.permissions import AllowAny
 from core.models import Video, Conversation, ConversationMessage
 from engine.rag.utils import query_router
 
@@ -125,3 +125,34 @@ class AssistantAPIView(APIView):
                 error_context,
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+class PublicAssistantAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request,*args, **kwargs):
+        query = request.data.get('query')
+        video_id_from_prompt_request = request.data.get('video_id')
+
+        if not query or not video_id_from_prompt_request:
+            logger.error(f"[Public Api] : Missing query {query} or videoId {video_id_from_prompt_request} in request")
+            return Response({'error':'Query and Video Id required'}, status = status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            logger.info(f"[Public API] : Trying to find video with youtube_id or vimeo_id : {video_id_from_prompt_request}")
+            video = get_object_or_404(Video, Q(youtube_id = video_id_from_prompt_request)|Q(vimeo_id = video_id_from_prompt_request))
+
+            logger.info(f"[Public API] : Found video : {video.title} (DB ID: {video.pk})")
+            logger.debug(f"[Public API] : Calling query_router for : {query} on video {video_id_from_prompt_request}")
+
+            answer = query_router(query = query , video_id= video_id_from_prompt_request, timestamp= 0.0, chat_history='', user_id = None)
+
+            return Response({'answer' : answer, 'conversation_id' : None}, status=status.HTTP_200_OK)
+        
+        except Video.DoesNotExist:
+            logger.error(f"[Public API] : Video with youtube_id or vimeo_id '{video_id_from_prompt_request}' not found", exc_info=False)
+            return Response({'error': f'Video with Id {video_id_from_prompt_request} not found.' },status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as e :
+            logger.error(f"[Public API] : An error occured : {e}", exc_info=True)
+
+            return Response({'error' : 'An error occured processiong your request.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
