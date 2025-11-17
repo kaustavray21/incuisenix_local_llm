@@ -68,8 +68,6 @@ class Transcript(models.Model):
     def __str__(self):
         return f'{self.video.title} - {self.start}'
 
-# ... (rest of your models: Enrollment, Note, Conversation, ConversationMessage)
-# No changes are needed for the other models.
 
 class Enrollment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -99,7 +97,7 @@ class Note(models.Model):
         ('failed', 'Failed'),
     ]
 
-    index_status = models.CharField(max_length=20, choices= INDEX_STATUS_CHOICES,)
+    index_status = models.CharField(max_length=20, choices= INDEX_STATUS_CHOICES, default='pending')
 
     class Meta:
         ordering = ['-created_at']
