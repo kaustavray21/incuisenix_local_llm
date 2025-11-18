@@ -7,7 +7,6 @@ class Course(models.Model):
     description = models.TextField()
     image_url = models.URLField(max_length=200)
 
-    # --- ADDED FOR FAISS INDEXING STATUS ---
     INDEX_STATUS_CHOICES = [
         ('none', 'No Index'),
         ('indexing', 'Indexing'),
@@ -18,9 +17,8 @@ class Course(models.Model):
         max_length=20,
         choices=INDEX_STATUS_CHOICES,
         default='none',
-        db_index=True  # Add db_index for faster lookups
+        db_index=True
     )
-    # --- END OF ADDITION ---
 
     def __str__(self):
         return self.title
@@ -28,17 +26,15 @@ class Course(models.Model):
 class Video(models.Model):
     id = models.AutoField(primary_key=True)
     
-    # --- MODIFIED: Made unique=True. This is critical for your plan. ---
-    # We must allow them to be null, but if they exist, they must be unique.
     youtube_id = models.CharField(max_length=50, unique=True, blank=True, null=True, db_index=True)
     vimeo_id = models.CharField(max_length=50, unique=True, blank=True, null=True, db_index=True)
-    # --- END OF MODIFICATION ---
-
+    
     title = models.CharField(max_length=200)
     video_url = models.URLField(max_length=200)
+    duration = models.FloatField(default=0.0)
+    
     course = models.ForeignKey(Course, related_name='videos', on_delete=models.CASCADE)
 
-    # --- ADDED FOR TRANSCRIPT STATUS ---
     TRANSCRIPT_STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('processing', 'Processing'),
@@ -49,9 +45,8 @@ class Video(models.Model):
         max_length=20,
         choices=TRANSCRIPT_STATUS_CHOICES,
         default='pending',
-        db_index=True # Add db_index for faster lookups
+        db_index=True
     )
-    # --- END OF ADDITION ---
 
     def __str__(self):
         return self.title
@@ -86,7 +81,7 @@ class Note(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
     title = models.CharField(max_length=200)
     content = models.TextField()
-    video_timestamp = models.PositiveIntegerField(help_text="Timestamp in seconds")
+    video_timestamp = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
 
