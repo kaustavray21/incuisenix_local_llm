@@ -182,3 +182,19 @@ def get_vimeo_links_api(request, video_id):
 
 def custom_404_view(request, exception=None):
     return render(request, 'core/404.html', {}, status=404)
+
+@login_required
+def get_video_status_api(request, video_id):
+    video = get_object_or_404(Video, id=video_id)
+    
+    if not Enrollment.objects.filter(user=request.user, course=video.course).exists():
+        return JsonResponse({'error': 'Not enrolled'}, status=403)
+
+    return JsonResponse({
+        'transcript_status': video.transcript_status,
+        'index_status': video.course.index_status,
+        'duration': video.duration
+    })
+
+def custom_404_view(request, exception=None):
+    return render(request, 'core/404.html', {}, status=404)
