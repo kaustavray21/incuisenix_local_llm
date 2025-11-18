@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import auth_views, content_views,api_note, api_conversation
+from .views import auth_views, content_views, api_note, api_conversation
 
 urlpatterns = [
     path('', content_views.home, name='home'),
