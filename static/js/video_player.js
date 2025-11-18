@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let pinnedLineContainer = document.getElementById('transcript-current-line');
     let lastActiveLine = null;
 
+    // --- Button Elements ---
+    const transcriptBtn = document.getElementById('toggle-transcript-btn');
+    const assistantBtn = document.getElementById('btn-assistant');
+    
+    let pollingInterval = null;
+    let isTranscriptLoaded = false;
+
     function formatTimestamp(seconds) {
         const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
         const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -45,12 +52,11 @@ document.addEventListener('DOMContentLoaded', function() {
             player = new Plyr(playerElement, playerConfig);
             window.videoPlayer = player;
             setupPlayerEvents(player);
-            loadTranscript(vimeoId || youtubeId);
+            checkStatusAndInitialize();
 
         } else if (provider === 'vimeo') {
             playerConfig.settings.push('quality');
             initializeVimeoPlayer(playerElement, playerConfig, videoId);
-        
         }
     }
 
@@ -72,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 player = new Plyr(element, config);
                 window.videoPlayer = player;
                 setupPlayerEvents(player);
-                loadTranscript(vimeoId || youtubeId);
+                checkStatusAndInitialize();
             } else {
                 throw new Error("No video links found.");
             }
@@ -83,6 +89,108 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // --- Combined Initialization and Polling Logic ---
+    function checkStatusAndInitialize() {
+        loadTranscript(vimeoId || youtubeId);
+        startStatusPolling();
+    }
+
+    function startStatusPolling() {
+        pollVideoStatus();
+        pollingInterval = setInterval(pollVideoStatus, 5000);
+    }
+
+    async function pollVideoStatus() {
+        try {
+            const response = await fetch(`/api/video-status/${videoId}/`);
+            if (!response.ok) return;
+            const statusData = await response.json();
+
+            const tStatus = (statusData.transcript_status || '').toLowerCase();
+            const iStatus = (statusData.index_status || '').toLowerCase();
+
+            // Update Transcript Button
+            updateButtonState(
+                transcriptBtn, 
+                tStatus, 
+                'transcript'
+            );
+
+            if (tStatus === 'complete' && !isTranscriptLoaded) {
+                console.log("Transcript processing complete. Reloading...");
+                loadTranscript(vimeoId || youtubeId);
+            }
+
+            // Update Assistant Button
+            updateButtonState(
+                assistantBtn, 
+                iStatus, 
+                'assistant'
+            );
+
+            // Stop polling if everything is done
+            if (tStatus === 'complete' && iStatus === 'complete') {
+                clearInterval(pollingInterval);
+                
+                // Ensure icons are reset to their final static state
+                resetButton(transcriptBtn, '<i class="far fa-file-alt"></i> <span class="btn-text">Transcript</span>');
+                resetButton(assistantBtn, '<i class="fas fa-robot me-1"></i> <span class="btn-text">AI Assistant</span>');
+            }
+
+        } catch (error) {
+            console.error("Error polling video status:", error);
+        }
+    }
+
+    function updateButtonState(btn, rawStatus, type) {
+        if (!btn) return;
+        const status = (rawStatus || 'none').toLowerCase();
+
+        if (status === 'processing' || status === 'indexing') {
+            // --- PROCESSING STATE: Show Spinner ---
+            btn.disabled = true;
+            btn.classList.add('disabled');
+            
+            const verb = (type === 'transcript') ? 'Generating...' : 'Indexing...';
+            // Replaces the icon with a spinning circle
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span class="btn-text">${verb}</span>`;
+
+        } else if (status === 'pending' || status === 'none') {
+            // --- PENDING STATE ---
+            btn.disabled = true;
+            btn.classList.add('disabled');
+            const text = (type === 'assistant') ? 'Waiting...' : 'Pending...';
+            btn.innerHTML = `<i class="far fa-clock"></i> <span class="btn-text">${text}</span>`;
+
+        } else if (status === 'complete') {
+            // --- COMPLETE STATE ---
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+            
+            // Restore Original Icons
+            if (type === 'transcript') {
+                btn.innerHTML = '<i class="far fa-file-alt"></i> <span class="btn-text">Transcript</span>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-robot me-1"></i> <span class="btn-text">AI Assistant</span>';
+            }
+
+        } else if (status === 'failed') {
+            // --- FAILED STATE ---
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span class="btn-text">Failed</span>';
+        }
+    }
+
+    function resetButton(btn, html) {
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+            btn.innerHTML = html;
+        }
+    }
+    // -----------------------------------------------------
+
+
     async function loadTranscript(transcriptVideoId) {
         if (!transcriptVideoId) return;
         
@@ -91,9 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const unavailableTemplate = document.getElementById('transcript-unavailable-template');
 
         if(pinnedLineContainer) {
-             pinnedLineContainer.innerHTML = `
-                <span class="text-content text-muted">Loading transcript...</span>
-             `;
+             pinnedLineContainer.innerHTML = `<span class="text-content text-muted">Loading transcript...</span>`;
         }
 
         if (!transcriptContent || !loadingSpinner || !unavailableTemplate) return;
@@ -105,19 +211,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             transcripts = await response.json();
 
-            loadingSpinner.remove();
+            if(loadingSpinner) loadingSpinner.remove();
 
             if (transcripts.length === 0) {
+                transcriptContent.innerHTML = ''; 
                 const unavailableEl = unavailableTemplate.content.cloneNode(true);
                 transcriptContent.appendChild(unavailableEl);
                 if(pinnedLineContainer) {
-                    pinnedLineContainer.innerHTML = `
-                        <span class="text-content text-muted">No transcript available.</span>
-                    `;
+                    pinnedLineContainer.innerHTML = `<span class="text-content text-muted">Transcript not available yet.</span>`;
                 }
+                isTranscriptLoaded = false;
                 return;
             }
             
+            isTranscriptLoaded = true;
             transcriptContent.innerHTML = '';
             
             if(pinnedLineContainer && transcripts.length > 0) {
@@ -131,35 +238,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 const lineElement = document.createElement('div');
                 lineElement.classList.add('transcript-line');
                 lineElement.dataset.start = line.start;
-                
-                const timestamp = formatTimestamp(line.start);
-                
                 lineElement.innerHTML = `
-                    <span class="transcript-timestamp">${timestamp}</span>
+                    <span class="transcript-timestamp">${formatTimestamp(line.start)}</span>
                     <span class="text-content">${line.content}</span>
                 `;
-                
                 lineElement.addEventListener('click', () => {
                     if (player) {
                         player.currentTime = line.start;
                         player.play();
                     }
                 });
-                
                 transcriptContent.appendChild(lineElement);
             });
 
         } catch (error) {
             console.error('Error loading transcript:', error);
-            
-            loadingSpinner.remove();
+            if(loadingSpinner) loadingSpinner.remove();
+            transcriptContent.innerHTML = '';
             const unavailableEl = unavailableTemplate.content.cloneNode(true);
             transcriptContent.appendChild(unavailableEl);
             if(pinnedLineContainer) {
-                pinnedLineContainer.innerHTML = `
-                    <span class="text-content text-muted">Error loading transcript.</span>
-                `;
+                pinnedLineContainer.innerHTML = `<span class="text-content text-muted">Error loading transcript.</span>`;
             }
+            isTranscriptLoaded = false;
         }
     }
 
@@ -184,11 +285,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (activeLineData && activeLineData !== lastActiveLine) {
             lastActiveLine = activeLineData;
-            
-            const timestamp = formatTimestamp(activeLineData.start);
-            
             pinnedLineContainer.innerHTML = `
-                <span class="transcript-timestamp">${timestamp}</span>
+                <span class="transcript-timestamp">${formatTimestamp(activeLineData.start)}</span>
                 <span class="text-content">${activeLineData.content}</span>
             `;
         } else if (!activeLineData && lastActiveLine !== null) {

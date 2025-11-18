@@ -11,8 +11,10 @@ def on_video_save(sender, instance, created, **kwargs):
     if created:
         logger.info(f"Signal: New video created (ID: {instance.pk}). Scheduling processing pipeline.")
         
+        # --- UPDATED: Set both statuses on the Video object directly ---
         instance.transcript_status = 'processing'
-        instance.save(update_fields=['transcript_status'])
+        instance.index_status = 'indexing'
+        instance.save(update_fields=['transcript_status', 'index_status'])
         
         async_task(
             'engine.tasks.task_process_new_video',

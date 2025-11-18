@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 def task_process_new_video(video_id: int):
     logger.info(f"Django-Q: Starting NEW VIDEO pipeline for video {video_id}")
     
+    video = None
     try:
         video = Video.objects.get(id=video_id)
         
@@ -21,26 +22,37 @@ def task_process_new_video(video_id: int):
             raise Exception(f"Transcript generation failed. Log: {log}")
             
         logger.info(f"Pipeline: 2. Creating FAISS index for video {video_id}")
+        # This function (in indexer.py) will be updated to set video.index_status = 'complete'
         create_index_for_single_video(video)
         
         logger.info(f"Django-Q: NEW VIDEO pipeline SUCCESS for video {video_id}.")
         
     except Exception as e:
         logger.error(f"Django-Q: NEW VIDEO pipeline FAILED for video {video_id}. Error: {e}", exc_info=True)
-        if 'video' in locals() and video:
+        if video:
+            # --- UPDATED: Mark BOTH statuses as failed so UI stops waiting ---
             video.transcript_status = 'failed'
-            video.save(update_fields=['transcript_status'])
+            video.index_status = 'failed'
+            video.save(update_fields=['transcript_status', 'index_status'])
 
 def task_generate_transcript(video_id: int):
     logger.info(f"Django-Q: Starting transcript task for video {video_id}")
     status, log = generate_transcript_for_video(video_id)
     if status == "Error":
         logger.error(f"Django-Q: Transcript task FAILED for video {video_id}. Log: {log}")
+        # Ensure failure is recorded in DB if the service didn't do it
+        try:
+            v = Video.objects.get(id=video_id)
+            v.transcript_status = 'failed'
+            v.save(update_fields=['transcript_status'])
+        except Exception:
+            pass
     else:
         logger.info(f"Django-Q: Transcript task SUCCESS for video {video_id}.")
 
 def task_generate_index(course_id: int):
     logger.info(f"Django-Q: Starting index task for course {course_id}")
+    # This will now iterate over videos and update THEIR index_status individually
     status, log = perform_course_index_generation(course_id)
     if status == "Error":
         logger.error(f"Django-Q: Index task FAILED for course {course_id}. Log: {log}")

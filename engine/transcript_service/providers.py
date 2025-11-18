@@ -1,6 +1,7 @@
 import os
 import vimeo
 import logging
+import yt_dlp # --- ADDED ---
 from youtube_transcript_api import YouTubeTranscriptApi
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def initialize_vimeo_client():
 def get_api_transcript(video, log_list):
     """
     Tries to fetch a pre-existing transcript from an API.
+    Also attempts to fetch and save the video duration.
 
     Returns a tuple: (transcript_data, use_whisper)
     - (data, False) if successful (e.g., YouTube)
@@ -35,9 +37,24 @@ def get_api_transcript(video, log_list):
     if video.youtube_id:
         log_list.append('  -> Trying YouTube Transcript API...')
         try:
+            # 1. Get Transcript
             api_transcript = YouTubeTranscriptApi.get_transcript(video.youtube_id)
             transcript_data = [{'start': item['start'], 'content': item['text']} for item in api_transcript]
             log_list.append('  -> SUCCESS: Successfully fetched from YouTube API.')
+
+            # 2. Get Duration (since we aren't downloading)
+            try:
+                ydl_opts = {'quiet': True}
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(f"https://www.youtube.com/watch?v={video.youtube_id}", download=False)
+                    duration = info.get('duration')
+                    if duration:
+                        video.duration = float(duration)
+                        video.save(update_fields=['duration'])
+                        log_list.append(f"  -> Updated video duration to {duration}s from YouTube metadata.")
+            except Exception as e_dur:
+                 log_list.append(f"  -> Warning: Could not fetch YouTube duration: {e_dur}")
+
             return transcript_data, False
         
         except Exception as e_api:
@@ -47,6 +64,19 @@ def get_api_transcript(video, log_list):
     elif video.vimeo_id:
         vimeo_client = initialize_vimeo_client()
         if vimeo_client:
+            # 1. Try to get Duration (Always useful for the UI timer)
+            try:
+                vid_response = vimeo_client.get(f'/videos/{video.vimeo_id}')
+                if vid_response.status_code == 200:
+                    duration = vid_response.json().get('duration')
+                    if duration:
+                        video.duration = float(duration)
+                        video.save(update_fields=['duration'])
+                        log_list.append(f"  -> Updated video duration to {duration}s from Vimeo API.")
+            except Exception as e:
+                log_list.append(f"  -> Warning: Could not fetch Vimeo duration: {e}")
+
+            # 2. Check for transcripts
             log_list.append('  -> Checking Vimeo API for text tracks...')
             api_path = f'/videos/{video.vimeo_id}/texttracks'
             try:

@@ -7,3 +7,4 @@ faiss_indexes
 local_videos
 django_cache
 media/temp_audio/
+media/transcripts/Test kit

@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 def download_audio(video, log_list):
     """
     Downloads the audio for a given Video object using yt-dlp.
+    Also fetches and saves the video duration to the database.
     Returns the final file path on success, or None on failure.
     """
     log_list.append('  -> Downloading audio for Whisper...')
@@ -59,8 +60,20 @@ def download_audio(video, log_list):
     try:
         log_list.append('  -> Initializing yt_dlp...')
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            log_list.append(f'  -> Calling ydl.download()...')
-            ydl.download([download_url])
+            log_list.append(f'  -> Calling ydl.extract_info() to download and get metadata...')
+            
+            # --- UPDATED: Use extract_info to get metadata + download ---
+            info = ydl.extract_info(download_url, download=True)
+            
+            # --- NEW: Capture Duration ---
+            duration = info.get('duration')
+            if duration:
+                video.duration = float(duration)
+                video.save(update_fields=['duration'])
+                log_list.append(f"  -> Updated video duration to {duration}s from yt-dlp metadata.")
+            else:
+                log_list.append("  -> Warning: No duration found in yt-dlp metadata.")
+            # -----------------------------
             
             if os.path.exists(final_filepath):
                 log_list.append(f'  -> SUCCESS: Audio downloaded: {os.path.basename(final_filepath)}')

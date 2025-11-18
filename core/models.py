@@ -7,19 +7,6 @@ class Course(models.Model):
     description = models.TextField()
     image_url = models.URLField(max_length=200)
 
-    INDEX_STATUS_CHOICES = [
-        ('none', 'No Index'),
-        ('indexing', 'Indexing'),
-        ('complete', 'Complete'),
-        ('failed', 'Failed'),
-    ]
-    index_status = models.CharField(
-        max_length=20,
-        choices=INDEX_STATUS_CHOICES,
-        default='none',
-        db_index=True
-    )
-
     def __str__(self):
         return self.title
 
@@ -45,6 +32,19 @@ class Video(models.Model):
         max_length=20,
         choices=TRANSCRIPT_STATUS_CHOICES,
         default='pending',
+        db_index=True
+    )
+
+    INDEX_STATUS_CHOICES = [
+        ('none', 'No Index'),
+        ('indexing', 'Indexing'),
+        ('complete', 'Complete'),
+        ('failed', 'Failed'),
+    ]
+    index_status = models.CharField(
+        max_length=20,
+        choices=INDEX_STATUS_CHOICES,
+        default='none',
         db_index=True
     )
 

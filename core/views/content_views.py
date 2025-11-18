@@ -180,10 +180,6 @@ def get_vimeo_links_api(request, video_id):
         logging.error(f"Unexpected error fetching Vimeo video {video.vimeo_id}: {e}")
         return JsonResponse({'error': 'An unexpected server error occurred.'}, status=500)
 
-def custom_404_view(request, exception=None):
-    return render(request, 'core/404.html', {}, status=404)
-
-@login_required
 def get_video_status_api(request, video_id):
     video = get_object_or_404(Video, id=video_id)
     
@@ -192,7 +188,7 @@ def get_video_status_api(request, video_id):
 
     return JsonResponse({
         'transcript_status': video.transcript_status,
-        'index_status': video.course.index_status,
+        'index_status': video.index_status,
         'duration': video.duration
     })
 
