@@ -21,4 +21,5 @@ urlpatterns = [
     
     path('api/conversations/delete/<int:conversation_id>/', api_conversation.delete_conversation, name='delete_conversation'),
     path('api/get-vimeo-links/<int:video_id>/', content_views.get_vimeo_links_api, name='api_get_vimeo_links'),
+    path('api/video-status/<int:video_id>/', content_views.get_video_status_api, name='api_get_video_status'),
 ]
