@@ -8,29 +8,41 @@ from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
-def task_process_new_video(video_id: int):
-    logger.info(f"Django-Q: Starting NEW VIDEO pipeline for video {video_id}")
+def task_process_new_video(vimeo_id: str):
+    """
+    Orchestrates the pipeline for a newly uploaded video using its Vimeo ID.
+    """
+    logger.info(f"Django-Q: Starting NEW VIDEO pipeline for Vimeo ID {vimeo_id}")
     
     video = None
     try:
-        video = Video.objects.get(id=video_id)
+        # 1. Retrieve the video using the Vimeo ID (String)
+        video = Video.objects.get(vimeo_id=vimeo_id)
         
-        logger.info(f"Pipeline: 1. Generating transcript for video {video_id}")
-        status, log = generate_transcript_for_video(video_id)
+        logger.info(f"Pipeline: 1. Generating transcript for video {video.id} (Vimeo: {vimeo_id})")
+        
+        # 2. Pass the INTERNAL Database ID to the transcript service
+        # (The transcript service expects a primary key ID)
+        status, log = generate_transcript_for_video(video.id)
         
         if status == "Error":
             raise Exception(f"Transcript generation failed. Log: {log}")
             
-        logger.info(f"Pipeline: 2. Creating FAISS index for video {video_id}")
-        # This function (in indexer.py) will be updated to set video.index_status = 'complete'
+        logger.info(f"Pipeline: 2. Creating FAISS index for video {video.id}")
+        
+        # 3. Create the index using the retrieved video object
         create_index_for_single_video(video)
         
-        logger.info(f"Django-Q: NEW VIDEO pipeline SUCCESS for video {video_id}.")
+        logger.info(f"Django-Q: NEW VIDEO pipeline SUCCESS for video {video.id}.")
         
+    except Video.DoesNotExist:
+        logger.error(f"CRITICAL: Could not find video with Vimeo ID {vimeo_id} in the database.")
+        # Cannot update status because the object wasn't found.
+
     except Exception as e:
-        logger.error(f"Django-Q: NEW VIDEO pipeline FAILED for video {video_id}. Error: {e}", exc_info=True)
+        logger.error(f"Django-Q: NEW VIDEO pipeline FAILED for Vimeo ID {vimeo_id}. Error: {e}", exc_info=True)
         if video:
-            # --- UPDATED: Mark BOTH statuses as failed so UI stops waiting ---
+            # Mark BOTH statuses as failed so UI stops waiting
             video.transcript_status = 'failed'
             video.index_status = 'failed'
             video.save(update_fields=['transcript_status', 'index_status'])
@@ -63,6 +75,7 @@ def task_update_note_index(user_id: int, video_id: str):
     try:
         logger.info(f"Djang-Q : Starting note index update for user {user_id}, video {video_id}")
         user  = User.objects.get(id=user_id)
+        # Supports both YouTube and Vimeo IDs for note indexing
         video = Video.objects.get( Q(youtube_id = video_id) | Q(vimeo_id = video_id))
 
         notes_to_process = Note.objects.filter(user = user, video = video)

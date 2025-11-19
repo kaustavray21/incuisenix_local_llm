@@ -6,6 +6,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.db.models import Q  # <--- ADDED IMPORT
 from ..models import Enrollment, Course, Video, Note
 from ..forms import NoteForm
 from django.core.cache import cache
@@ -117,7 +118,8 @@ def video_player_view(request, course_id):
 
 @login_required
 def get_vimeo_links_api(request, video_id):
-    video = get_object_or_404(Video, id=video_id, vimeo_id__isnull=False)
+    # Correctly looking up by vimeo_id as string from URL
+    video = get_object_or_404(Video, vimeo_id=video_id, vimeo_id__isnull=False)
     
     if not Enrollment.objects.filter(user=request.user, course=video.course).exists():
         return JsonResponse({'error': 'Not enrolled'}, status=403)
@@ -181,10 +183,12 @@ def get_vimeo_links_api(request, video_id):
         return JsonResponse({'error': 'An unexpected server error occurred.'}, status=500)
 
 def get_video_status_api(request, video_id):
-    video = get_object_or_404(Video, id=video_id)
+ 
+    video = get_object_or_404(Video, Q(vimeo_id=video_id) | Q(youtube_id=video_id))
     
-    if not Enrollment.objects.filter(user=request.user, course=video.course).exists():
-        return JsonResponse({'error': 'Not enrolled'}, status=403)
+    if request.user.is_authenticated:
+        if not Enrollment.objects.filter(user=request.user, course=video.course).exists():
+            return JsonResponse({'error': 'Not enrolled'}, status=403)
 
     return JsonResponse({
         'transcript_status': video.transcript_status,

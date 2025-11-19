@@ -2,9 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const playerData = document.getElementById('player-data-container');
     if (!playerData) return;
 
-    const videoId = playerData.dataset.videoId;
+    const videoId = playerData.dataset.videoId; // Internal DB ID (e.g. 160)
     const provider = playerData.dataset.videoProvider;
-    const vimeoId = playerData.dataset.vimeoId;
+    const vimeoId = playerData.dataset.vimeoId; // Vimeo ID (e.g. "830160601")
     const youtubeId = playerData.dataset.youtubeId;
     
     let transcripts = [];
@@ -56,13 +56,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } else if (provider === 'vimeo') {
             playerConfig.settings.push('quality');
-            initializeVimeoPlayer(playerElement, playerConfig, videoId);
+            // --- FIX 1: Pass vimeoId instead of videoId ---
+            initializeVimeoPlayer(playerElement, playerConfig, vimeoId);
         }
     }
 
-    async function initializeVimeoPlayer(element, config, videoModelId) {
+    async function initializeVimeoPlayer(element, config, platformVideoId) {
         try {
-            const response = await fetch(`/api/get-vimeo-links/${videoModelId}/`);
+            // This now correctly fetches /api/get-vimeo-links/830160601/
+            const response = await fetch(`/api/get-vimeo-links/${platformVideoId}/`);
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || `Error: ${response.status}`);
@@ -102,7 +104,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function pollVideoStatus() {
         try {
-            const response = await fetch(`/api/video-status/${videoId}/`);
+            // --- FIX 2: Use the Platform ID (Vimeo or YouTube) ---
+            const activeId = vimeoId || youtubeId;
+            
+            if (!activeId) return;
+
+            const response = await fetch(`/api/video-status/${activeId}/`);
             if (!response.ok) return;
             const statusData = await response.json();
 

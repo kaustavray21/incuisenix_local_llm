@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_transcript_vector_store(video_id: str):
+    video_id = str(video_id)
     logger.debug(f"Attempting to load transcript vector store for video_id: {video_id}")
     
     index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'transcripts', video_id)
