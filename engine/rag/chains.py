@@ -1,13 +1,14 @@
 from django.conf import settings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from operator import itemgetter 
 from .vector_store.retriever import get_retriever
 
-
-LLM_MODEL = "gemini-2.5-flash" 
+# Use the model defined in settings (DeepSeek-R1-Distill 14B)
+LLM_MODEL = settings.OLLAMA_MODEL
+BASE_URL = settings.OLLAMA_BASE_URL
 
 # --- NEW: A more advanced classifier ---
 def get_query_type_classifier_chain():
@@ -25,10 +26,15 @@ def get_query_type_classifier_chain():
         "    Examples: 'what did the video say about variables?', 'explain my note on functions', 'what is a decorator?'.\n"
         "3.  'General' questions are for information not in the video or notes. "
         "    Examples: 'hello', 'who are you?', 'what is the capital of France?'.\n\n"
-        "Respond with ONLY the category name ('Fetch_Notes', 'RAG', or 'General').\n\n"
+        "Respond with ONLY the category name ('Fetch_Notes', 'RAG', or 'General') and nothing else. Do not include reasoning or XML tags.\n\n"
         "Question: {question}\nCategory:"
     )
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY, temperature=0)
+    
+    llm = ChatOllama(
+        model=LLM_MODEL,
+        base_url=BASE_URL,
+        temperature=0
+    )
     return prompt | llm | StrOutputParser()
 # --- END NEW ---
 
@@ -55,7 +61,12 @@ def get_rag_chain(video_id: str, user_id: int | None):
     """
     
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY)
+    
+    llm = ChatOllama(
+        model=LLM_MODEL,
+        base_url=BASE_URL,
+        temperature=0.3  # Slightly creative but focused for RAG
+    )
 
     rag_chain = (
         {
@@ -75,7 +86,11 @@ def get_general_chain():
     prompt = ChatPromptTemplate.from_template(
         "You are a helpful AI assistant. Answer the following question to the best of your ability.\nQuestion: {question}"
     )
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY)
+    llm = ChatOllama(
+        model=LLM_MODEL,
+        base_url=BASE_URL,
+        temperature=0.7
+    )
     return prompt | llm | StrOutputParser()
 
 
@@ -92,7 +107,11 @@ def get_summarizer_chain():
     {question}
     """
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY)
+    llm = ChatOllama(
+        model=LLM_MODEL,
+        base_url=BASE_URL,
+        temperature=0.2
+    )
     return prompt | llm | StrOutputParser()
 
 def get_time_based_chain():
@@ -109,5 +128,9 @@ def get_time_based_chain():
     Based *only* on the context provided above, what is being discussed?
     """
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, google_api_key=settings.GEMINI_API_KEY)
+    llm = ChatOllama(
+        model=LLM_MODEL,
+        base_url=BASE_URL,
+        temperature=0.2
+    )
     return prompt | llm | StrOutputParser()
