@@ -40,8 +40,8 @@ class AssistantAPIView(APIView):
             user = request.user
 
             logger.info(f"Attempting to find Video with youtube_id OR vimeo_id = '{video_id_from_request}'")
-            video = get_object_or_404(
-                Video,
+            # FIXED: Used Video.objects.get() instead of get_object_or_404 to correctly catch DoesNotExist
+            video = Video.objects.get(
                 Q(youtube_id=video_id_from_request) | Q(vimeo_id=video_id_from_request)
             )
             logger.info(f"Successfully found video: {video.title} (DB ID: {video.pk})")
@@ -114,7 +114,7 @@ class AssistantAPIView(APIView):
              logger.error(f"Video with youtube_id OR vimeo_id '{video_id_from_request}' not found in database.", exc_info=False)
              return Response(
                  {'error': f'Video with ID {video_id_from_request} not found.'},
-                 status=status.HTTP_44_NOT_FOUND
+                 status=status.HTTP_404_NOT_FOUND
              )
         except Exception as e:
             logger.error(f"An error occurred in AssistantAPIView: {e}", exc_info=True)
@@ -139,7 +139,8 @@ class PublicAssistantAPIView(APIView):
         
         try:
             logger.info(f"[Public API] : Trying to find video with youtube_id or vimeo_id : {video_id_from_prompt_request}")
-            video = get_object_or_404(Video, Q(youtube_id = video_id_from_prompt_request)|Q(vimeo_id = video_id_from_prompt_request))
+            # FIXED: Used Video.objects.get() instead of get_object_or_404
+            video = Video.objects.get(Q(youtube_id = video_id_from_prompt_request)|Q(vimeo_id = video_id_from_prompt_request))
 
             logger.info(f"[Public API] : Found video : {video.title} (DB ID: {video.pk})")
             logger.debug(f"[Public API] : Calling query_router for : {query} on video {video_id_from_prompt_request}")

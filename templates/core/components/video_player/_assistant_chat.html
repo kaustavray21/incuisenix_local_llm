@@ -1,6 +1,6 @@
 <div class="offcanvas offcanvas-end" tabindex="-1" id="assistantOffcanvas" 
      aria-labelledby="assistantOffcanvasLabel"
-     data-video-id="{{video.youtube_id|default:video.vimeo_id}}">
+     data-video-id="{% if video.youtube_id %}{{ video.youtube_id }}{% elif video.vimeo_id %}{{ video.vimeo_id }}{% endif %}">
 
   <div class="offcanvas-header assistant-header">
     

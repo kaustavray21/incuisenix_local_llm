@@ -24,7 +24,9 @@ export function setActiveConversation(videoId, convId) {
 }
 
 export function resetCurrentConversation() {
-  console.log(`State: Resetting conversation for video ${currentVideoId}`);
+  // --- UPDATED: clearer logging to confirm Video ID persistence ---
+  console.log(`State: Resetting conversation. Preserving Video ID: ${currentVideoId}`);
+  
   if (currentVideoId) {
     videoConversationMap[currentVideoId] = null;
   }

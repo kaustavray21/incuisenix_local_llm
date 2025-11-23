@@ -32,6 +32,25 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
+   * Helper to parse markdown (Duplicated here to ensure availability)
+   * This handles formatting like bolding, code blocks, and lists.
+   */
+  function parseMarkdown(text) {
+    if (window.marked && typeof window.marked.parse === "function") {
+      return window.marked.parse(text);
+    } else {
+      console.warn("Marked.js not loaded. Code blocks will not be formatted.");
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/\n/g, "<br>");
+    }
+  }
+
+  /**
    * Loads the list of past conversations from the API.
    */
   async function loadConversationHistory() {
@@ -60,9 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
       conversations.forEach((convo) => {
         const card = document.createElement("div");
         card.className = "conversation-card";
-        // --- We no longer need data attributes on the card itself ---
-
-        // --- UPDATED: Added delete button and a content wrapper ---
+        
         card.innerHTML = `
                 <div class="conversation-card-content" data-conversation-id="${convo.id}" data-video-id="${convo.video_id}">
                     <div class="conversation-card-title">${convo.title}</div>
@@ -74,7 +91,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 <button class="delete-conversation-btn" data-id="${convo.id}" title="Delete chat">&times;</button>
             `;
 
-        // --- UPDATED: Replaced with a single delegated listener below ---
         historyList.appendChild(card);
       });
     } catch (error) {
@@ -99,7 +115,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     console.log(
       `Loading messages for conversation ${conversationId} (video ${videoId})`
-    ); // Debug log
+    );
 
     InCuiseNixAssistant.clearChatBox();
     InCuiseNixAssistant.appendMessage("Loading history...", "assistant");
@@ -122,14 +138,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
       InCuiseNixAssistant.setActiveConversation(videoId, conversationId);
 
-      messages.forEach((msg) => {
-        InCuiseNixAssistant.appendMessage(msg.query, "user");
-        InCuiseNixAssistant.appendMessage(msg.answer, "assistant");
-      });
+      // --- UPDATED LOGIC ---
+      if (messages.length === 0) {
+        // Handle the case where the conversation exists but has no messages
+        InCuiseNixAssistant.appendMessage(
+          "No messages found in this conversation.", 
+          "assistant"
+        );
+      } else {
+        messages.forEach((msg) => {
+          InCuiseNixAssistant.appendMessage(msg.query, "user");
+          
+          // Apply markdown formatting to the assistant's answer
+          const htmlAnswer = parseMarkdown(msg.answer);
+          InCuiseNixAssistant.appendMessage(htmlAnswer, "assistant");
+        });
+      }
 
-      // --- FIX: Update state and toggle view ---
       isHistoryVisible = false;
       InCuiseNixAssistant.toggleHistoryView(false);
+
     } catch (error) {
       console.error("Error loading messages:", error);
       InCuiseNixAssistant.clearChatBox();
@@ -141,7 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * --- NEW: Deletes a conversation from the server and UI ---
+   * Deletes a conversation from the server and UI
    */
   async function deleteConversation(conversationId, cardElement) {
     if (!confirm("Are you sure you want to delete this conversation?")) {
@@ -161,16 +189,13 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       if (response.status === 204) {
-        // 1. Remove from UI
         cardElement.remove();
 
-        // 2. If it was the currently active chat, reset the chat window
         const currentState = InCuiseNixAssistant.getState();
         if (currentState.currentConversationId == conversationId) {
           InCuiseNixAssistant.resetChat();
         }
 
-        // 3. Check if list is now empty
         if (historyList.children.length === 0) {
           historyList.innerHTML =
             '<p class="text-center">No conversation history found.</p>';
@@ -190,30 +215,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (historyButton) {
     historyButton.addEventListener("click", () => {
-      // --- FIX: Use state variable for logic ---
       if (!isHistoryVisible) {
-        loadConversationHistory(); // Only load if we are opening it
+        loadConversationHistory();
       }
-      isHistoryVisible = !isHistoryVisible; // Toggle state
+      isHistoryVisible = !isHistoryVisible;
       InCuiseNixAssistant.toggleHistoryView(isHistoryVisible);
     });
   }
 
-  // --- NEW: Delegated Event Listener for the history list ---
-  // This replaces adding a listener to every single card.
   if (historyList) {
     historyList.addEventListener("click", (e) => {
       const deleteBtn = e.target.closest(".delete-conversation-btn");
       const cardContent = e.target.closest(".conversation-card-content");
 
       if (deleteBtn) {
-        // --- Handle Delete Click ---
         e.stopPropagation();
         const conversationId = deleteBtn.dataset.id;
         const cardElement = deleteBtn.closest(".conversation-card");
         deleteConversation(conversationId, cardElement);
       } else if (cardContent) {
-        // --- Handle Load Click ---
         const conversationId = cardContent.dataset.conversationId;
         const videoId = cardContent.dataset.videoId;
         loadConversationMessages(conversationId, videoId);

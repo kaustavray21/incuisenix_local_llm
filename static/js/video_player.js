@@ -1,6 +1,8 @@
 import { fetchVimeoLinks, fetchVideoStatus, fetchTranscript } from './modules/video-api.js';
 import { renderTranscript, highlightTranscript } from './modules/transcript-ui.js';
 import { updateButtonState, resetButton } from './modules/player-controls.js';
+// --- NEW: Import state management to initialize video ID ---
+import { setActiveConversation } from './modules/assistant-state.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     const playerData = document.getElementById('player-data-container');
@@ -10,6 +12,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const vimeoId = playerData.dataset.vimeoId;
     const youtubeId = playerData.dataset.youtubeId;
     const platformId = vimeoId || youtubeId;
+    
+    // --- NEW: Initialize the Assistant State with the current Video ID ---
+    // This fixes the bug where clicking "New Chat" would send video_id: null
+    if (platformId) {
+        setActiveConversation(platformId, null);
+    }
     
     const playerElement = document.getElementById('player');
     const transcriptBtn = document.getElementById('toggle-transcript-btn');

@@ -28,6 +28,7 @@ export function renderTranscript(transcripts, player) {
 
     // Initialize pinned line with first segment
     if (pinnedLineContainer && transcripts.length > 0) {
+        // Uses the updated formatTimestamp from utils.js (00:00:00)
         pinnedLineContainer.innerHTML = `
             <span class="transcript-timestamp">${formatTimestamp(transcripts[0].start)}</span>
             <span class="text-content">${transcripts[0].content}</span>

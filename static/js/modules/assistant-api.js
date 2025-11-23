@@ -12,7 +12,8 @@ function removeLoadingIndicator() {
   }
 }
 
-function parseMarkdown(text) {
+// --- UPDATED: Added 'export' keyword here ---
+export function parseMarkdown(text) {
   if (window.marked && typeof window.marked.parse === "function") {
     return window.marked.parse(text);
   } else {
