@@ -32,7 +32,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # Ollama Configuration
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-OLLAMA_MODEL = "llama3.1:8b"
+OLLAMA_MODEL = "qwen2.5-coder:7b"
 OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
 
 # SECURITY WARNING: don't run with debug turned on in production!
