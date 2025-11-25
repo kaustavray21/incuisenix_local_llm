@@ -48,6 +48,7 @@ def generate_transcript_for_video(video_id: int):
             
             # Step 4: Final success update
             video.transcript_status = 'complete'
+            video.index_status = 'none'
             video.save()
             log_list.append(f'--- Finished. Set video {video.id} status to "complete" ---')
             return "Generated", log_list

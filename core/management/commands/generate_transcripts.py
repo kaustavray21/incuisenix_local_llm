@@ -70,7 +70,7 @@ class Command(BaseCommand):
                     video_locked.transcript_status = 'processing'
                     video_locked.save()
                 
-                async_task('core.tasks.task_generate_transcript', video_locked.id)
+                async_task('engine.tasks.task_generate_transcript', video_locked.id)
                 
                 self.stdout.write(self.style.SUCCESS(f'  Queued: "{video.title}" (ID: {video.id})'))
                 queued_count += 1

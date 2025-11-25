@@ -21,6 +21,10 @@ class Command(BaseCommand):
                 if video.transcript_status != 'complete':
                     video.transcript_status = 'complete'
                     changed = True
+            elif video.transcript_status == 'processing':
+                self.stdout.write(self.style.WARNING(f"  Resetting '{video.title}': Stuck in 'processing' with no transcripts."))
+                video.transcript_status = 'failed'
+                changed = True
             
             platform_id = video.youtube_id or video.vimeo_id
             index_exists_on_disk = False

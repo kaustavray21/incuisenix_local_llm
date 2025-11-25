@@ -59,9 +59,14 @@ def create_index_for_single_video(video: Video):
         transcripts = Transcript.objects.filter(video=video).order_by('start')
 
         if not transcripts.exists():
-            logger.warning(f"No transcripts found for video: {platform_id}. Marking complete (nothing to index).")
-            video.index_status = 'complete'
-            video.save(update_fields=['index_status'])
+            if video.transcript_status == 'complete':
+                logger.warning(f"No transcripts found for video: {platform_id} but transcript status is complete. Marking index complete (empty transcript).")
+                video.index_status = 'complete'
+                video.save(update_fields=['index_status'])
+            else:
+                logger.warning(f"No transcripts found for video: {platform_id} and transcript status is '{video.transcript_status}'. Marking index as failed.")
+                video.index_status = 'failed'
+                video.save(update_fields=['index_status'])
             return
             
         docs = []
