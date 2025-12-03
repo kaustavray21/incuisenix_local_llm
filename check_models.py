@@ -10,25 +10,22 @@ def format_bytes(size):
         n += 1
     return f"{size:.2f} {power_labels[n]}B"
 
-def check_ollama_status():
+def check_ollama_status(target_models=None):
     base_url = "http://localhost:11434"
     
-    # Updated to the faster 7b model based on our debugging session
-    required_models = {
-        "deepseek-r1:7b": False, 
-        "nomic-embed-text": False
-    }
+    if target_models is None:
+        target_models = []
+
+    required_models = {model: False for model in target_models}
 
     print(f"1. Connecting to Ollama at {base_url}...")
 
     try:
-        # Check if Ollama is running (using tags endpoint)
         response = requests.get(f"{base_url}/api/tags")
         
         if response.status_code == 200:
             print("   ✅ Success: Ollama is running.\n")
             
-            # --- NEW: Check which models are currently running in memory ---
             print("2. Checking currently running models (in memory)...")
             try:
                 ps_response = requests.get(f"{base_url}/api/ps")
@@ -49,21 +46,22 @@ def check_ollama_status():
                 print(f"   ⚠️ Error checking running models: {e}")
             print("-" * 30)
 
-            # --- Check for available models (On Disk) ---
             print("3. Checking for required models on disk...")
             
-            # Parse available models
             models_data = response.json().get('models', [])
             available_model_names = [m['name'] for m in models_data]
             
-            # Check for partial matches
+            if not required_models:
+                print("   ℹ️  No specific models requested to check.")
+                print(f"   ℹ️  Available models on disk: {', '.join(available_model_names)}")
+                return
+
             for required in required_models.keys():
                 for available in available_model_names:
                     if required in available:
                         required_models[required] = True
                         break
             
-            # Report status
             all_present = True
             for model, present in required_models.items():
                 if present:
@@ -77,10 +75,9 @@ def check_ollama_status():
                 print("🚀 System Ready! All required models are available.")
             else:
                 print("⚠️  Some models are missing. Run the following commands in your terminal:")
-                if not required_models["deepseek-r1:7b"]:
-                    print("   ollama pull deepseek-r1:7b")
-                if not required_models["nomic-embed-text"]:
-                    print("   ollama pull nomic-embed-text")
+                for model, present in required_models.items():
+                    if not present:
+                        print(f"   ollama pull {model}")
                     
         else:
             print(f"   ❌ Error: Ollama responded with status code {response.status_code}")
@@ -93,4 +90,11 @@ def check_ollama_status():
         print("   2. Or running 'ollama serve' in your terminal (Linux)")
 
 if __name__ == "__main__":
-    check_ollama_status()
+    if len(sys.argv) > 1:
+        models_to_check = sys.argv[1:]
+    else:
+        models_to_check = []
+        print("Usage: python script.py [model_name1] [model_name2] ...")
+        print("No models specified. Checking connectivity and listing available models...\n")
+    
+    check_ollama_status(models_to_check)
