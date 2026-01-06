@@ -35,6 +35,13 @@ class Video(models.Model):
         db_index=True
     )
 
+    ocr_transcript_status = models.CharField(
+        max_length=20,
+        choices=TRANSCRIPT_STATUS_CHOICES,
+        default='pending',
+        db_index=True
+    )
+
     INDEX_STATUS_CHOICES = [
         ('none', 'No Index'),
         ('indexing', 'Indexing'),
@@ -42,6 +49,13 @@ class Video(models.Model):
         ('failed', 'Failed'),
     ]
     index_status = models.CharField(
+        max_length=20,
+        choices=INDEX_STATUS_CHOICES,
+        default='none',
+        db_index=True
+    )
+
+    ocr_index_status = models.CharField(
         max_length=20,
         choices=INDEX_STATUS_CHOICES,
         default='none',
@@ -63,6 +77,17 @@ class Transcript(models.Model):
     def __str__(self):
         return f'{self.video.title} - {self.start}'
 
+class OCRTranscript(models.Model):
+    id = models.AutoField(primary_key=True)
+    start = models.FloatField() 
+    content = models.TextField() 
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='ocr_transcripts')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='ocr_transcripts')
+    youtube_id = models.CharField(max_length=50, db_index=True, blank=True, null=True)
+    vimeo_id = models.CharField(max_length=50, db_index=True, blank=True, null=True)
+
+    def __str__(self):
+        return f'OCR - {self.video.title} - {self.start}s'
 
 class Enrollment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

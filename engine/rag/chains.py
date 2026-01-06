@@ -10,7 +10,6 @@ from .vector_store.retriever import get_retriever
 LLM_MODEL = settings.OLLAMA_MODEL
 BASE_URL = settings.OLLAMA_BASE_URL
 
-# --- NEW: A more advanced classifier ---
 def get_query_type_classifier_chain():
     """
     Classifies the user's question into one of three categories:
@@ -36,7 +35,6 @@ def get_query_type_classifier_chain():
         temperature=0
     )
     return prompt | llm | StrOutputParser()
-# --- END NEW ---
 
 
 def get_rag_chain(video_id: str, user_id: int | None):
@@ -47,7 +45,10 @@ def get_rag_chain(video_id: str, user_id: int | None):
     Your goal is to provide accurate and helpful answers based on the user's question and the context provided.
 
     Use the following sources to answer the user's question:
-    1.  **Video Context**: Key information retrieved from the video transcript and the user's personal notes.
+    1.  **Video Context**: Key information retrieved from:
+        * **Audio Transcripts**: What was spoken by the instructor.
+        * **Visual Text (OCR)**: Code, slides, diagrams, or text shown on screen that may not have been spoken.
+        * **User Notes**: Personal annotations made by the user.
     2.  **Chat History**: The ongoing conversation between you and the user.
 
     CONTEXT:
@@ -97,8 +98,9 @@ def get_general_chain():
 def get_summarizer_chain():
     prompt_template = """
     You are an expert AI assistant for the InCuiseNix e-learning platform.
-    Your task is to provide a concise and helpful summary of the video transcript provided below.
-    Based *only* on the following CONTEXT from the video, please answer the user's request.
+    Your task is to provide a concise and helpful summary of the video content provided below.
+    
+    Based *only* on the following CONTEXT (derived from spoken audio and visual text on screen), please answer the user's request.
     
     CONTEXT:
     {context}
@@ -118,9 +120,10 @@ def get_time_based_chain():
     prompt_template = """
     You are an expert AI assistant for a video learning platform.
     The user has asked what is being discussed at a specific moment in the video.
-    The following CONTEXT is the transcript from that exact moment.
+    
+    The following CONTEXT contains the audio transcript and visual text (OCR) from that exact moment.
     Your task is to carefully analyze this CONTEXT and concisely explain the main topic, concept, or action being discussed.
-    Synthesize the information into a clear and helpful summary. Do not state that the context is insufficient.
+    Synthesize the spoken words with any visible code or text into a clear summary.
     
     CONTEXT:
     {context}

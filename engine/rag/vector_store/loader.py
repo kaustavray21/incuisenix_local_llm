@@ -33,6 +33,38 @@ def get_transcript_vector_store(video_id: str):
         logger.exception(f"Error loading transcript index for video {video_id}: {e}")
         return None
 
+
+def get_ocr_vector_store(video_id: str):
+    """
+    Loads the OCR FAISS index for a specific video.
+    """
+    video_id = str(video_id)
+    logger.debug(f"Attempting to load OCR vector store for video_id: {video_id}")
+    
+    index_path = os.path.join(settings.FAISS_INDEX_ROOT, 'ocr', video_id)
+    
+    if not os.path.exists(index_path):
+        # It's normal for some videos not to have OCR data if no text was detected
+        logger.info(f"No OCR index directory found for video {video_id} at {index_path}")
+        return None
+
+    faiss_file = os.path.join(index_path, "index.faiss")
+    if not os.path.exists(faiss_file):
+        logger.warning(f"FAISS file 'index.faiss' not found within OCR directory {index_path}")
+        return None
+
+    try:
+        logger.debug(f"Loading OCR FAISS index from: {index_path}")
+        return FAISS.load_local(
+            index_path,
+            get_embeddings(),
+            allow_dangerous_deserialization=True
+        )
+    except Exception as e:
+        logger.exception(f"Error loading OCR index for video {video_id}: {e}")
+        return None
+
+
 def get_note_vector_store(video_id: str, user_id: int):
     logger.debug(f"Attempting to load notes vector store for video_id: {video_id}, user_id: {user_id}")
 

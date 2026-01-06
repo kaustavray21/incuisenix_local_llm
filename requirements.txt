@@ -57,3 +57,9 @@ browser-cookie3
 PyVimeo
 curl_cffi
 brotli
+
+#ocr processing
+paddlepaddle>=2.6.0
+paddleocr>=2.7.0
+opencv-python-headless>=4.9.0
+yt-dlp>=2024.0.0

@@ -139,7 +139,7 @@ class PublicAssistantAPIView(APIView):
         
         try:
             logger.info(f"[Public API] : Trying to find video with youtube_id or vimeo_id : {video_id_from_prompt_request}")
-            # FIXED: Used Video.objects.get() instead of get_object_or_404
+            
             video = Video.objects.get(Q(youtube_id = video_id_from_prompt_request)|Q(vimeo_id = video_id_from_prompt_request))
 
             logger.info(f"[Public API] : Found video : {video.title} (DB ID: {video.pk})")
@@ -154,6 +154,6 @@ class PublicAssistantAPIView(APIView):
             return Response({'error': f'Video with Id {video_id_from_prompt_request} not found.' },status=status.HTTP_404_NOT_FOUND)
         
         except Exception as e :
-            logger.error(f"[Public API] : An error occured : {e}", exc_info=True)
+            logger.error(f"[Public API] : An error occurred : {e}", exc_info=True)
 
-            return Response({'error' : 'An error occured processiong your request.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error' : 'An error occurred processing your request.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
